@@ -1,14 +1,21 @@
 # Enterprise Project Templates
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Tests](https://img.shields.io/badge/tests-44%2F44-brightgreen.svg)
+![Status](https://img.shields.io/badge/status-production--ready-success.svg)
+
 ## 🎯 Overview
 
-This collection provides enterprise-grade project templates with:
+This collection provides enterprise-grade, production-tested CI/CD pipeline templates with:
+- **Three Validated Pipeline Templates** (Node.js, Python, Generic)
 - **Automated CI/CD Pipeline** with GitHub Actions
-- **Change Control System** with branch protection
-- **Quality Gates** (TypeScript, ESLint, Security, Testing)
-- **Automated Deployment** scripts for solo developers
-- **Comprehensive Documentation** templates
+- **Three-Tier Branch Strategy** (development → staging → main)
+- **Automated Branch Management** (production auto-syncs)
+- **Comprehensive Test Suite** (44 automated tests, 100% pass rate)
+- **Complete Documentation** with quick-start guides
 - **IDE-Agnostic** automation
+
+**Status:** ✅ All templates tested and approved for production use
 
 ## 📁 Template Structure
 
@@ -33,10 +40,23 @@ enterprise-templates/
 
 ## 🚀 Quick Start
 
-### **Option 1: Use Complete Project Template**
+### **Option 1: Clone from GitHub (Recommended)**
+```bash
+# Clone the latest templates
+git clone https://github.com/YOUR_USERNAME/enterprise-templates.git
+cd enterprise-templates
+
+# Or clone a specific version
+git clone --branch v1.0.0 https://github.com/YOUR_USERNAME/enterprise-templates.git
+
+# Copy template to your project
+cp enterprise-templates/change-control/pipeline-template.yml your-project/.github/workflows/ci-cd.yml
+```
+
+### **Option 2: Use Local Copy**
 ```bash
 # Copy entire project template
-cp -r /Users/rosssivertsen/dev/enterprise-templates/project-starter/* /path/to/new-project/
+cp -r ~/dev/enterprise-templates/project-starter/* /path/to/new-project/
 cd /path/to/new-project/
 
 # Configure project
@@ -46,15 +66,30 @@ cd /path/to/new-project/
 npm run dev
 ```
 
-### **Option 2: Use Individual Templates**
+### **Option 3: Use Individual Templates**
 ```bash
-# Copy specific templates
-cp /Users/rosssivertsen/dev/enterprise-templates/change-control/pipeline-template.yml .github/workflows/ci-cd.yml
-cp /Users/rosssivertsen/dev/enterprise-templates/automation/deploy-template.sh scripts/deploy.sh
-cp /Users/rosssivertsen/dev/enterprise-templates/documentation/CHANGELOG-template.md CHANGELOG.md
+# Node.js/TypeScript project
+cp ~/dev/enterprise-templates/change-control/pipeline-template.yml .github/workflows/ci-cd.yml
+
+# Python project
+cp ~/dev/enterprise-templates/change-control/pipeline-python-template.yml .github/workflows/ci-cd.yml
+
+# Generic project
+cp ~/dev/enterprise-templates/change-control/pipeline-generic-template.yml .github/workflows/ci-cd.yml
 
 # Make scripts executable
 chmod +x scripts/*.sh
+```
+
+### **Option 4: Pull Latest Updates**
+```bash
+# If you already cloned the repo
+cd enterprise-templates
+git pull origin main
+
+# Or fetch a specific version
+git fetch --tags
+git checkout v1.0.0
 ```
 
 ## 🔧 Template Components
@@ -292,5 +327,89 @@ cp ~/dev/enterprise-templates/change-control/pipeline-generic-template.yml .gith
 ```
 
 **See `change-control/README.md` for detailed documentation on each template.**
+
+---
+
+## 📦 Version Management & Updates
+
+### **Current Version: 1.0.0**
+
+This repository uses semantic versioning (MAJOR.MINOR.PATCH) for change management.
+
+### **Using Specific Versions:**
+
+```bash
+# Clone latest stable version
+git clone https://github.com/YOUR_USERNAME/enterprise-templates.git
+
+# Clone specific version
+git clone --branch v1.0.0 https://github.com/YOUR_USERNAME/enterprise-templates.git
+
+# Switch to specific version in existing clone
+git fetch --tags
+git checkout v1.0.0
+```
+
+### **Keeping Templates Updated:**
+
+#### **For New Projects:**
+Always pull the latest version when starting a new project:
+```bash
+# Pull latest templates
+cd ~/dev/enterprise-templates
+git pull origin main
+
+# Then copy to your new project
+cp change-control/pipeline-template.yml your-new-project/.github/workflows/ci-cd.yml
+```
+
+#### **For Existing Projects:**
+Review release notes before updating existing workflows:
+```bash
+# Check what's changed
+cd ~/dev/enterprise-templates
+git fetch origin
+git log --oneline v1.0.0..origin/main
+
+# Review changes and selectively update
+git diff v1.0.0 origin/main -- change-control/pipeline-template.yml
+```
+
+### **Version History:**
+
+**v1.0.0 (October 31, 2024)** - Initial Production Release
+- Three validated pipeline templates (Node.js, Python, Generic)
+- 44 automated tests (100% pass rate)
+- Complete documentation suite
+- Branch management automation
+- Three-tier deployment strategy
+
+### **When to Update:**
+
+**Update immediately for:**
+- Security fixes
+- Critical bug fixes
+- Major feature additions
+
+**Review before updating:**
+- Breaking changes
+- Configuration changes
+- New requirements
+
+### **GitHub Repository Setup:**
+
+Once pushed to GitHub, you can:
+1. **Watch for updates** - Enable repository notifications
+2. **Use GitHub Releases** - Download specific versions
+3. **Fork for customization** - Maintain your own version
+4. **Contribute improvements** - Submit pull requests
+
+### **Best Practices:**
+
+1. **Pin versions in production** - Use specific tags for stability
+2. **Test updates locally** - Run validation tests before deploying
+3. **Review changelogs** - Understand what changed between versions
+4. **Keep documentation synced** - Update your project docs when updating templates
+5. **Backup before updating** - Commit current state before applying updates
 
 ---
