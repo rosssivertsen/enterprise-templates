@@ -56,3 +56,13 @@ coverage/
 htmlcov/
 .coverage
 .pytest_cache/
+
+# Scaffolding test output
+test-output/
+test-output/**/.enterprise.yml
+*.scaffold-tmp
+
+# Environment / secrets
+.env
+.env.*
+!.env.example

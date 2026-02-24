@@ -418,3 +418,21 @@ The CI/CD pipeline templates in the enterprise-templates repository have passed 
 ---
 
 **END OF TESTING SUMMARY**
+
+---
+
+## v2.0.0 Scaffolding Platform Update
+
+**Date:** February 2026
+
+Tests have been updated for the v2.0.0 scaffolding platform. The new scaffolding
+pipeline is validated by `test-project/test-scaffold.sh`, which exercises
+language selection, tier generation, `.enterprise.yml` creation, and file-tree
+verification for all supported combinations (Python, Node, Generic x Lite,
+Standard, Production).
+
+Previous v1.0.0 pipeline configuration tests (`test-pipelines.sh`,
+`test-branch-management.sh`) remain valid and continue to pass. The new
+scaffold tests supplement — not replace — the original suite.
+
+See `test-project/test-scaffold.sh` for the full scaffold validation script.
