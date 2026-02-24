@@ -1,484 +1,268 @@
-# How to Use Enterprise Templates Repository
+# Usage Guide
 
-## Overview
+**Version:** 2.0.0
+**Last Updated:** February 2026
 
-This repository serves as a **template library** that you can clone or pull from to start new projects or update existing ones with production-tested CI/CD pipelines.
+---
 
-## Two Ways to Use This Repository
+## Scaffolding a New Project
 
-### Method 1: Clone for New Projects (Recommended)
-
-Use this method when starting a brand new project.
-
-```bash
-# 1. Clone the enterprise templates repository
-git clone https://github.com/YOUR_USERNAME/enterprise-templates.git
-cd enterprise-templates
-
-# 2. Choose your template and copy to new project
-mkdir ~/projects/my-new-project
-cp change-control/pipeline-template.yml ~/projects/my-new-project/.github/workflows/ci-cd.yml
-
-# 3. Set up your new project
-cd ~/projects/my-new-project
-git init
-git add .
-git commit -m "Initial commit with CI/CD pipeline"
-```
-
-**Benefits:**
-- Always get the latest tested version
-- Easy to update templates in the future
-- Can diff changes between versions
-- Version controlled template library
-
-### Method 2: Keep Local Copy
-
-Use this method if you prefer working with a local copy.
+Run the interactive CLI from the repository root:
 
 ```bash
-# 1. Keep templates in a central location
-ls ~/dev/enterprise-templates/
-
-# 2. Copy templates when needed
-cp ~/dev/enterprise-templates/change-control/pipeline-template.yml \
-   ~/projects/new-project/.github/workflows/ci-cd.yml
-
-# 3. Update local copy periodically
-cd ~/dev/enterprise-templates
-git pull origin main
+./scaffold.sh my-project
 ```
 
-**Benefits:**
-- Works offline
-- Faster access
-- Can customize templates locally
+The CLI prompts you for:
 
-## Creating a New Project
+1. **Language** — Python, Node/TypeScript, or Generic
+2. **Tier** — Lite, Standard, or Production
+3. **Optional features** — Docker, AI agents, additional CI steps
 
-### Step-by-Step Process
+When finished, your new project directory contains all selected files, a
+pre-configured `.enterprise.yml` manifest, and a ready-to-use Git repository.
 
-#### 1. Clone or Update Templates
+### Non-Interactive Mode
 
-**If first time:**
-```bash
-git clone https://github.com/YOUR_USERNAME/enterprise-templates.git ~/dev/enterprise-templates
-```
-
-**If already cloned:**
-```bash
-cd ~/dev/enterprise-templates
-git pull origin main
-```
-
-#### 2. Create Your New Project
+Pass flags to skip prompts:
 
 ```bash
-# Create project directory
-mkdir ~/projects/my-new-project
-cd ~/projects/my-new-project
-
-# Initialize git
-git init
-git branch -M main
+./scaffold.sh my-project --lang python --tier production --docker --agents
 ```
 
-#### 3. Copy Appropriate Template
+---
 
-**For Node.js/TypeScript:**
-```bash
-mkdir -p .github/workflows
-cp ~/dev/enterprise-templates/change-control/pipeline-template.yml \
-   .github/workflows/ci-cd.yml
-```
+## Tier Selection Guide
 
-**For Python:**
-```bash
-mkdir -p .github/workflows
-cp ~/dev/enterprise-templates/change-control/pipeline-python-template.yml \
-   .github/workflows/ci-cd.yml
-```
+### Lite
 
-**For Generic:**
-```bash
-mkdir -p .github/workflows
-cp ~/dev/enterprise-templates/change-control/pipeline-generic-template.yml \
-   .github/workflows/ci-cd.yml
-```
+Best for: personal projects, prototypes, internal tools with a single maintainer.
 
-#### 4. Customize the Workflow
+- Basic CI (lint + test on push)
+- Single-branch workflow (main)
+- README template only
+- No Docker, no deployment steps
 
-Edit `.github/workflows/ci-cd.yml` to add your deployment commands:
+### Standard
+
+Best for: team projects, client work, services that deploy to a single environment.
+
+- Full CI/CD (lint, test, build, deploy)
+- Two-branch workflow (main + development)
+- README + CHANGELOG templates
+- Dockerfile included
+- Local + CI AI agents
+
+### Production
+
+Best for: critical services, multi-environment deployments, regulated projects.
+
+- Full CI/CD with environment gates and approval steps
+- Three-branch workflow (main + staging + development)
+- Full documentation suite (README, CHANGELOG, ADRs)
+- Dockerfile + docker-compose
+- Full AI agent suite (local, CI, review)
+- Branch protection rule suggestions
+
+---
+
+## .enterprise.yml Configuration
+
+Every scaffolded project contains an `.enterprise.yml` file at its root. This
+manifest drives CI/CD behavior, agent configuration, and documentation generation.
+
+Key fields:
 
 ```yaml
-- name: Deploy to staging
-  run: |
-    # Replace with your deployment commands
-    npm run deploy:staging
-    # or
-    ./deploy.sh staging
+project:
+  name: my-project
+  language: python          # python | node | generic
+  tier: standard            # lite | standard | production
+
+ci:
+  provider: github-actions
+  pipeline: core/ci-cd/pipeline-python.yml
+
+agents:
+  enabled: true
+  provider: anthropic       # anthropic | openai | local
+
+docker:
+  enabled: true
+  base_image: python:3.12-slim
 ```
 
-#### 5. Set Up Branches
+For the complete schema with all fields and defaults, see
+[core/enterprise-schema.md](core/enterprise-schema.md).
+
+---
+
+## Upgrading a Project's Tier
+
+You can upgrade at any time by re-running the scaffolder:
 
 ```bash
-# Create development branch
-git checkout -b development
-git add .
-git commit -m "Initial setup with CI/CD pipeline"
-git push -u origin development
-
-# Create staging branch
-git checkout -b staging
-git push -u origin staging
-
-# Push main
-git checkout main
-git push -u origin main
+./scaffold.sh my-project --tier production --upgrade
 ```
 
-#### 6. Configure GitHub
+The `--upgrade` flag preserves your existing source code and configuration while
+adding the new tier's files (additional CI steps, Docker compose, documentation
+templates, etc.). It will not overwrite files you have modified.
 
-1. Go to repository Settings → Environments
-2. Create two environments:
-   - `staging`
-   - `production`
-3. Add any required secrets
+You can also upgrade manually:
 
-#### 7. Test the Pipeline
+1. Update `tier:` in `.enterprise.yml`
+2. Copy the additional template files from `core/` into your project
+3. Update your CI workflow to reference the new pipeline template
+
+---
+
+## Language-Specific Notes
+
+### Python
+
+Scaffolded Python projects use a **Makefile** for common tasks:
 
 ```bash
-# Make a change and push
-echo "# My Project" > README.md
-git add README.md
-git commit -m "Add README"
-git push origin development
+make install          # pip install -r requirements.txt
+make install-dev      # pip install -r requirements-dev.txt
+make test             # pytest
+make lint             # flake8 + mypy
+make format           # black + isort
+make clean            # remove __pycache__, .pytest_cache, etc.
 ```
 
-Check the Actions tab to see the pipeline run!
+The CI pipeline calls these same Makefile targets, so local and CI behavior match.
 
-## Updating Existing Projects
+### Node / TypeScript
 
-### Pulling Template Updates
+Scaffolded Node projects use **npm scripts** defined in `package.json`:
 
 ```bash
-# 1. Update your local templates
-cd ~/dev/enterprise-templates
-git pull origin main
-
-# 2. Check what changed
-git log --oneline v1.0.0..HEAD -- change-control/pipeline-template.yml
-
-# 3. See the diff
-git diff v1.0.0 HEAD -- change-control/pipeline-template.yml
-
-# 4. Copy updated template to your project (backup first!)
-cp ~/projects/my-project/.github/workflows/ci-cd.yml \
-   ~/projects/my-project/.github/workflows/ci-cd.yml.backup
-
-cp ~/dev/enterprise-templates/change-control/pipeline-template.yml \
-   ~/projects/my-project/.github/workflows/ci-cd.yml
-
-# 5. Review and merge your customizations
-diff ~/projects/my-project/.github/workflows/ci-cd.yml.backup \
-     ~/projects/my-project/.github/workflows/ci-cd.yml
+npm install           # install dependencies
+npm test              # vitest
+npm run lint          # eslint
+npm run build         # tsc (TypeScript compilation)
+npm run format        # prettier
 ```
 
-## Version Management
+TypeScript is configured by default via `tsconfig.json` and `vitest.config.ts`.
 
-### Using Specific Versions
+### Generic
+
+Generic projects use a **Makefile** with placeholder targets. Fill in language-specific
+commands as needed:
 
 ```bash
-# List available versions
-cd ~/dev/enterprise-templates
-git tag -l
-
-# Checkout specific version
-git checkout v1.0.0
-
-# Copy template from that version
-cp change-control/pipeline-template.yml ~/projects/my-project/.github/workflows/
-
-# Return to latest
-git checkout main
+make build            # placeholder — add your build command
+make test             # placeholder — add your test command
+make lint             # placeholder — add your lint command
 ```
 
-### Creating a Project with Specific Version
+---
+
+## Agent Setup
+
+### Prerequisites
+
+Set your LLM API key as an environment variable:
 
 ```bash
-# Clone specific version directly
-git clone --branch v1.0.0 https://github.com/YOUR_USERNAME/enterprise-templates.git \
-  enterprise-templates-v1.0.0
-
-# Copy template
-cp enterprise-templates-v1.0.0/change-control/pipeline-template.yml \
-   my-project/.github/workflows/ci-cd.yml
+export LLM_API_KEY="your-api-key-here"
 ```
+
+For CI agents, add `LLM_API_KEY` as a repository secret in GitHub.
+
+### Configuring Providers
+
+Edit the `agents:` section in `.enterprise.yml`:
+
+```yaml
+agents:
+  enabled: true
+  provider: anthropic       # anthropic | openai | local
+  model: claude-sonnet-4-20250514   # optional: override default model
+```
+
+The LLM abstraction layer in `core/agents/llm-abstraction/` routes requests to
+the configured provider. Local models (Ollama, LM Studio) are supported via the
+`local` provider.
+
+### Agent Capabilities
+
+| Agent | Runs In | Purpose |
+|---|---|---|
+| Local skills | Editor / terminal | Code generation, refactoring, docs |
+| CI review | GitHub Actions | Automated PR review comments |
+| CI changelog | GitHub Actions | Draft changelog entries from commits |
+| CI test-gen | GitHub Actions | Suggest missing test cases |
+
+---
+
+## CI/CD Pipeline Overview
+
+All tiers use GitHub Actions. Pipeline templates live in `core/ci-cd/`.
+
+| Stage | Lite | Standard | Production |
+|---|---|---|---|
+| Lint | Yes | Yes | Yes |
+| Test | Yes | Yes | Yes |
+| Build | — | Yes | Yes |
+| Deploy to staging | — | Yes | Yes (with gate) |
+| Deploy to production | — | On main push | On main push (with approval) |
+| AI review | — | Optional | Yes |
+
+Branch-to-environment mapping:
+
+- `development` → staging deployment
+- `staging` → staging UAT (Production tier only)
+- `main` → production deployment
+
+---
 
 ## Common Workflows
 
-### Scenario 1: Starting a React Project
+### Feature Development
 
 ```bash
-# 1. Update templates
-cd ~/dev/enterprise-templates && git pull origin main
-
-# 2. Create project
-npx create-react-app my-react-app
-cd my-react-app
-
-# 3. Add CI/CD pipeline
-mkdir -p .github/workflows
-cp ~/dev/enterprise-templates/change-control/pipeline-template.yml \
-   .github/workflows/ci-cd.yml
-
-# 4. Set up branches
-git checkout -b development && git push -u origin development
-git checkout -b staging && git push -u origin staging
-git checkout main && git push -u origin main
-
-# 5. Configure GitHub environments
-# Go to Settings → Environments → Create "staging" and "production"
+git checkout -b feature/my-feature development
+# ... make changes ...
+git push -u origin feature/my-feature
+# Open PR to development — CI runs lint + test
+# Merge to development — deploys to staging
+# Promote development → main (or via staging for Production tier)
 ```
 
-### Scenario 2: Starting a Python/Django Project
+### Hotfix
 
 ```bash
-# 1. Update templates
-cd ~/dev/enterprise-templates && git pull origin main
-
-# 2. Create project
-django-admin startproject myproject
-cd myproject
-
-# 3. Add CI/CD pipeline
-mkdir -p .github/workflows
-cp ~/dev/enterprise-templates/change-control/pipeline-python-template.yml \
-   .github/workflows/ci-cd.yml
-
-# 4. Set up git
-git init
-git add .
-git commit -m "Initial commit"
-
-# 5. Set up branches (same as above)
+git checkout -b hotfix/critical-fix main
+# ... fix the issue ...
+git push -u origin hotfix/critical-fix
+# Open PR to main — CI runs full pipeline
+# Merge to main — deploys to production
+# main auto-syncs back to staging/development
 ```
 
-### Scenario 3: Adding CI/CD to Existing Project
+### Release (Production Tier)
 
 ```bash
-# 1. Navigate to your project
-cd ~/projects/existing-project
-
-# 2. Update templates
-cd ~/dev/enterprise-templates && git pull origin main
-cd ~/projects/existing-project
-
-# 3. Add pipeline
-mkdir -p .github/workflows
-cp ~/dev/enterprise-templates/change-control/pipeline-template.yml \
-   .github/workflows/ci-cd.yml
-
-# 4. Create additional branches if needed
-git checkout -b development
-git push -u origin development
-git checkout -b staging
-git push -u origin staging
-
-# 5. Commit and push
+# Ensure staging is verified
 git checkout main
-git add .github/workflows/ci-cd.yml
-git commit -m "Add CI/CD pipeline"
-git push origin main
-```
-
-## Testing Before Production
-
-### Validate Template Locally
-
-```bash
-# Run validation tests
-cd ~/dev/enterprise-templates/test-project
-./test-pipelines.sh
-
-# Test branch management
-./test-branch-management.sh
-```
-
-### Validate in Test Repository
-
-```bash
-# Create test repository
-mkdir ~/projects/test-pipeline
-cd ~/projects/test-pipeline
-git init
-
-# Copy validation workflow
-cp ~/dev/enterprise-templates/test-project/.github/workflows/validate-workflow.yml \
-   .github/workflows/
-
-# Push and check Actions tab
-git add .
-git commit -m "Test pipeline"
-git push origin main
-```
-
-## Maintenance
-
-### Keeping Your Template Library Updated
-
-```bash
-# Weekly or monthly update
-cd ~/dev/enterprise-templates
-git pull origin main
-
-# Check for new versions
-git tag -l
-
-# Review release notes
-git log --oneline --decorate
-```
-
-### When to Update Your Projects
-
-**Update immediately:**
-- Security vulnerabilities fixed
-- Critical bugs patched
-
-**Review before updating:**
-- Major version changes (2.0.0)
-- Breaking changes in release notes
-- New requirements or dependencies
-
-**Schedule regular updates:**
-- Minor versions (1.1.0, 1.2.0)
-- Documentation improvements
-- New features you want to use
-
-## Best Practices
-
-### 1. Always Keep Templates Updated
-```bash
-# Set a reminder to update monthly
-cd ~/dev/enterprise-templates && git pull origin main
-```
-
-### 2. Test Updates Before Deploying
-```bash
-# Copy to test project first
-cp template.yml test-project/.github/workflows/
-# Test in test project
-# Then deploy to production projects
-```
-
-### 3. Backup Before Updating
-```bash
-# Always backup your current workflow
-cp .github/workflows/ci-cd.yml .github/workflows/ci-cd.yml.backup
-```
-
-### 4. Document Your Customizations
-```yaml
-# Add comments to your customizations
-- name: Deploy to staging
-  run: |
-    # CUSTOM: Added specific deployment command for our infrastructure
-    ./custom-deploy.sh staging
-```
-
-### 5. Use Version Tags for Production
-```bash
-# Pin to specific version for critical projects
-git checkout v1.0.0
-cp change-control/pipeline-template.yml critical-project/.github/workflows/
-```
-
-## Troubleshooting
-
-### Templates Not Found
-
-```bash
-# Verify repository location
-ls ~/dev/enterprise-templates/change-control/
-
-# If not found, clone again
-git clone https://github.com/YOUR_USERNAME/enterprise-templates.git \
-  ~/dev/enterprise-templates
-```
-
-### Workflow Not Triggering
-
-```bash
-# Check file is in correct location
-ls .github/workflows/ci-cd.yml
-
-# Check YAML syntax
-yamllint .github/workflows/ci-cd.yml
-
-# Check branches match
-git branch -a
-```
-
-### Updates Breaking Your Project
-
-```bash
-# Restore backup
-cp .github/workflows/ci-cd.yml.backup .github/workflows/ci-cd.yml
-
-# Or checkout previous commit
-git log -- .github/workflows/ci-cd.yml
-git checkout <commit-hash> -- .github/workflows/ci-cd.yml
-```
-
-## Support & Documentation
-
-### Available Documentation
-
-- **QUICK-START.md** - 5-minute setup guide
-- **TESTING-GUIDE.md** - Comprehensive testing documentation
-- **TEST-RESULTS.md** - Detailed test results
-- **TESTING-SUMMARY.md** - Executive summary
-- **change-control/README.md** - Template-specific docs
-
-### Getting Help
-
-1. Check test-project/TESTING-GUIDE.md
-2. Run validation tests locally
-3. Review test-project/TEST-RESULTS.md
-4. Check GitHub Actions logs
-5. Review template comments
-
----
-
-## Summary: Quick Reference
-
-### New Project
-```bash
-git clone https://github.com/YOUR_USERNAME/enterprise-templates.git
-cp enterprise-templates/change-control/pipeline-template.yml my-project/.github/workflows/ci-cd.yml
-```
-
-### Update Templates
-```bash
-cd ~/dev/enterprise-templates && git pull origin main
-```
-
-### Specific Version
-```bash
-cd ~/dev/enterprise-templates
-git checkout v1.0.0
-cp change-control/pipeline-template.yml my-project/.github/workflows/
-git checkout main
-```
-
-### Test Before Deploy
-```bash
-cd ~/dev/enterprise-templates/test-project
-./test-pipelines.sh
+git merge staging
+git tag v1.2.0
+git push origin main --tags
+# CI deploys to production and creates a GitHub release
 ```
 
 ---
 
-**Last Updated:** October 31, 2024  
-**Version:** 1.0.0  
-**Maintained By:** Ross Sivertsen
+## Further Reading
+
+- [core/enterprise-schema.md](core/enterprise-schema.md) — Full `.enterprise.yml` reference
+- [README.md](README.md) — Project overview and quick start
+- [TESTING-SUMMARY.md](TESTING-SUMMARY.md) — Test suite status
+
+---
+
+**Maintained by:** Ross Sivertsen

@@ -1,0 +1,46 @@
+name: "PR Review Agent"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changes
+        run: |
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ' ')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          echo "Changed files: $FILES"
+
+      - name: Get diff content
+        id: diff
+        run: |
+          git diff origin/${{ github.base_ref }}...HEAD > /tmp/pr-diff.txt
+          echo "Diff size: $(wc -l < /tmp/pr-diff.txt) lines"
+
+      - name: Run AI Review
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "PR Review Agent"
+          echo "==============="
+          echo "Changed files: ${{ steps.changes.outputs.files }}"
+          echo ""
+          echo "Configure LLM provider in .enterprise.yml"
+          echo "Set LLM_API_KEY secret in GitHub repository settings"
+          echo ""
+          echo "This workflow will:"
+          echo "  1. Read .enterprise.yml for agent config"
+          echo "  2. Send diff to configured LLM provider"
+          echo "  3. Post review comments via GitHub API"

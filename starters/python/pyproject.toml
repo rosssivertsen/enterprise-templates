@@ -1,0 +1,23 @@
+[project]
+name = "project-name"
+version = "0.1.0"
+description = ""
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "unit: Unit tests",
+    "e2e: End-to-end integration tests",
+    "slow: Slow tests",
+]
+addopts = "-v --tb=short --strict-markers"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+ignore_missing_imports = true
