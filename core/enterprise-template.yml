@@ -1,0 +1,149 @@
+# =============================================================================
+# .enterprise.yml — Enterprise Project Configuration Template
+# =============================================================================
+#
+# This file is copied into new projects as `.enterprise.yml` during scaffolding.
+# It controls branching strategy, quality gates, AI agent configuration, and
+# Docker packaging for the project.
+#
+# Tier legend:
+#   lite       — Minimal setup, single developer or prototype projects.
+#   standard   — Team projects with CI/CD and basic quality gates.
+#   production — Full enterprise pipeline with all gates enforced.
+#
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# project — Basic project metadata (all tiers: lite, standard, production)
+# ---------------------------------------------------------------------------
+project:
+  # Human-readable project name used in dashboards and generated docs.
+  name: "my-project"
+
+  # Short description of the project's purpose.
+  description: "A new enterprise project"
+
+  # Primary language of the project.
+  # Determines default linters, Docker base images, and test runners.
+  # Allowed values: python | node | generic
+  language: "python"
+
+  # Enterprise tier that governs which quality and automation features are
+  # enabled by default. Higher tiers enforce stricter gates.
+  # Allowed values: lite | standard | production
+  tier: "standard"
+
+# ---------------------------------------------------------------------------
+# branches — Git branching strategy (all tiers: lite, standard, production)
+# ---------------------------------------------------------------------------
+# lite:       Only `production` branch is required.
+# standard:   `production` and `development` are required.
+# production: All branches are required and `sync` must be true.
+branches:
+  # The branch that represents the live / released state.
+  production: "main"
+
+  # Pre-production integration branch for QA and acceptance testing.
+  staging: "staging"
+
+  # Day-to-day development branch; pull requests target this branch.
+  development: "develop"
+
+  # When true, the scaffolding system creates branch-protection rules and
+  # keeps the branches synchronised via automated merge-forward PRs.
+  sync: true
+
+# ---------------------------------------------------------------------------
+# quality — Code quality and testing gates (standard and production tiers)
+# ---------------------------------------------------------------------------
+# lite:       Quality section is optional; no gates enforced.
+# standard:   lint and unit_test_coverage are enforced.
+# production: All gates are enforced; e2e_required_for_prod must be true.
+quality:
+  # Run the language-appropriate linter (e.g. ruff for Python, eslint for Node).
+  lint: true
+
+  # Run static type checking (e.g. mypy for Python, tsc --noEmit for Node).
+  type_check: true
+
+  # Run a security/dependency audit (e.g. bandit, npm audit).
+  security_audit: true
+
+  # Minimum unit-test line-coverage percentage required to pass CI.
+  unit_test_coverage: 80
+
+  # When true, end-to-end tests must pass before a production deploy is allowed.
+  e2e_required_for_prod: true
+
+# ---------------------------------------------------------------------------
+# agents — AI / LLM agent configuration (standard and production tiers)
+# ---------------------------------------------------------------------------
+# lite:       Agents are disabled by default.
+# standard:   Agents are enabled with default provider settings.
+# production: Agents are enabled; per-role overrides are recommended.
+agents:
+  # Master switch — set to false to disable all AI agent features.
+  enabled: true
+
+  # Default model settings applied to every agent role unless overridden.
+  default:
+    # LLM provider identifier.
+    provider: "anthropic"
+
+    # Model to use for agent tasks.
+    model: "claude-sonnet-4-20250514"
+
+    # Name of the environment variable that holds the API key.
+    # The key itself is NEVER stored in this file.
+    api_key_env: "LLM_API_KEY"
+
+  # Per-role model overrides. Uncomment and customise as needed.
+  # Each override inherits from `default` and only the specified fields
+  # are replaced.
+  #
+  # overrides:
+  #   code_review:
+  #     provider: "anthropic"
+  #     model: "claude-sonnet-4-20250514"
+  #   test_writer:
+  #     provider: "anthropic"
+  #     model: "claude-sonnet-4-20250514"
+  #   pr_review:
+  #     provider: "anthropic"
+  #     model: "claude-sonnet-4-20250514"
+
+  # Local skills — agent capabilities available in the local dev environment.
+  local:
+    code_review: true
+    test_writer: true
+    e2e_test_writer: true
+    debug: true
+    deploy: true
+    doc_writer: true
+
+  # CI agents — agent capabilities that run inside CI/CD pipelines.
+  ci:
+    pr_review: true
+    auto_test: true
+    deploy_gate: true
+    incident: true
+
+# ---------------------------------------------------------------------------
+# docker — Container packaging settings (standard and production tiers)
+# ---------------------------------------------------------------------------
+# lite:       Docker section is optional; ignored if absent.
+# standard:   Docker is available but `enabled` defaults to false.
+# production: Docker is enabled and enforced for deployable services.
+docker:
+  # Whether to generate Dockerfile and related artifacts during scaffolding.
+  enabled: true
+
+  # Base Docker image. Use "auto" to let the scaffolder pick an image based
+  # on the project language (e.g. python:3.12-slim, node:20-alpine).
+  base_image: "auto"
+
+  # Default port exposed by the container.
+  port: 8000
+
+  # Whether to generate a docker-compose.yml for local multi-service development.
+  compose: false
