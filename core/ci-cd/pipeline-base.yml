@@ -1,0 +1,234 @@
+# Reusable Base CI/CD Pipeline
+# Called by language-specific pipelines via workflow_call
+# Provides universal lifecycle: quality-gates → deploy-staging → e2e-tests → deploy-production → branch-sync → release
+
+name: Base CI/CD Pipeline
+
+on:
+  workflow_call:
+    inputs:
+      # Language-specific commands
+      lint_command:
+        description: 'Command to run linting'
+        required: true
+        type: string
+      type_check_command:
+        description: 'Command to run type checking'
+        required: false
+        type: string
+        default: 'echo "No type check configured"'
+      security_audit_command:
+        description: 'Command to run security audit'
+        required: true
+        type: string
+      test_command:
+        description: 'Command to run unit tests'
+        required: true
+        type: string
+      e2e_test_command:
+        description: 'Command to run end-to-end tests'
+        required: true
+        type: string
+      build_command:
+        description: 'Command to build the project'
+        required: false
+        type: string
+        default: 'echo "No build step configured"'
+      coverage_threshold:
+        description: 'Minimum code coverage percentage'
+        required: false
+        type: string
+        default: '80'
+      # Setup commands
+      setup_command:
+        description: 'Command to install dependencies'
+        required: true
+        type: string
+      # Runtime configuration
+      runner_version:
+        description: 'Language runtime version (e.g. node 18, python 3.12)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Stage 1: Quality Gates
+  # ──────────────────────────────────────────────
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ${{ inputs.setup_command }}
+
+      - name: Lint
+        run: ${{ inputs.lint_command }}
+
+      - name: Type check
+        run: ${{ inputs.type_check_command }}
+
+      - name: Security audit
+        run: ${{ inputs.security_audit_command }}
+
+      - name: Unit tests
+        run: ${{ inputs.test_command }}
+
+      - name: Build verification
+        run: ${{ inputs.build_command }}
+
+  # ──────────────────────────────────────────────
+  # Stage 2: Deploy to Staging
+  # ──────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging')
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ${{ inputs.setup_command }}
+
+      - name: Build for staging
+        run: ${{ inputs.build_command }}
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add staging deployment commands here
+          echo "Staging deployment completed"
+
+  # ──────────────────────────────────────────────
+  # Stage 3: E2E Tests (against staging)
+  # ──────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging')
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ${{ inputs.setup_command }}
+
+      - name: Run E2E tests against staging
+        run: ${{ inputs.e2e_test_command }}
+
+  # ──────────────────────────────────────────────
+  # Stage 4: Deploy to Production
+  # ──────────────────────────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: ${{ inputs.setup_command }}
+
+      - name: Build for production
+        run: ${{ inputs.build_command }}
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          # Add production deployment commands here
+          echo "Production deployment completed"
+
+  # ──────────────────────────────────────────────
+  # Stage 5: Branch Sync (main → staging → dev)
+  # ──────────────────────────────────────────────
+  branch-sync:
+    name: Branch Sync
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Sync main → staging
+        run: |
+          echo "Syncing main into staging..."
+          if git show-ref --verify --quiet refs/remotes/origin/staging; then
+            git fetch origin staging:staging
+            git checkout staging
+            git merge --no-ff main -m "chore: merge main into staging [skip ci]"
+            git push origin staging
+            echo "Staging branch updated with main"
+          else
+            echo "Staging branch does not exist, skipping"
+          fi
+
+      - name: Sync main → development
+        run: |
+          echo "Syncing main into development..."
+          if git show-ref --verify --quiet refs/remotes/origin/development; then
+            git fetch origin development:development
+            git checkout development
+            git merge --no-ff main -m "chore: merge main into development [skip ci]"
+            git push origin development
+            echo "Development branch updated with main"
+          else
+            echo "Development branch does not exist, skipping"
+          fi
+
+  # ──────────────────────────────────────────────
+  # Stage 6: Release (date-based tag)
+  # ──────────────────────────────────────────────
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Create date-based release tag
+        run: |
+          DATE_TAG="release-$(date +'%Y-%m-%d')"
+          # Append incrementing suffix if tag already exists
+          FINAL_TAG="$DATE_TAG"
+          COUNTER=1
+          while git rev-parse "$FINAL_TAG" >/dev/null 2>&1; do
+            FINAL_TAG="${DATE_TAG}.${COUNTER}"
+            COUNTER=$((COUNTER + 1))
+          done
+          git tag -a "$FINAL_TAG" -m "Release $FINAL_TAG"
+          git push origin "$FINAL_TAG"
+          echo "Created release tag: $FINAL_TAG"

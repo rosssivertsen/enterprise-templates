@@ -1,0 +1,186 @@
+# Generic CI/CD Pipeline
+# Copy this to .github/workflows/ci-cd.yml and customize for your project
+# Lifecycle: quality-gates → deploy-staging → e2e-tests → deploy-production → branch-sync → release
+
+name: Generic CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, staging, development]
+  pull_request:
+    branches: [main, staging, development]
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Stage 1: Quality Gates
+  # ──────────────────────────────────────────────
+  quality-gates:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run quality checks
+        run: |
+          echo "Running quality checks..."
+          # Add your quality check commands here:
+          # - Linting
+          # - Code style checks
+          # - Security scans
+          # - Unit tests
+          echo "Quality checks passed"
+
+      - name: Verify documentation
+        run: |
+          echo "Verifying documentation..."
+          test -f README.md || echo "Warning: README.md not found"
+          test -f CHANGELOG.md || echo "Warning: CHANGELOG.md not found"
+          echo "Documentation verified"
+
+  # ──────────────────────────────────────────────
+  # Stage 2: Deploy to Staging
+  # ──────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging')
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your staging deployment commands here
+          echo "Staging deployment completed"
+
+  # ──────────────────────────────────────────────
+  # Stage 3: E2E Tests (against staging)
+  # ──────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging')
+    environment: staging
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run E2E tests against staging
+        run: |
+          echo "Running E2E tests against staging..."
+          # Add your E2E test commands here
+          # Examples:
+          # - Cypress: npx cypress run --config baseUrl=$STAGING_URL
+          # - Playwright: npx playwright test
+          # - Selenium: python -m pytest tests/e2e/
+          # - curl-based smoke tests
+          echo "E2E tests passed"
+        env:
+          TEST_ENV: staging
+
+  # ──────────────────────────────────────────────
+  # Stage 4: Deploy to Production
+  # ──────────────────────────────────────────────
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: quality-gates
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          # Add your production deployment commands here
+          echo "Production deployment completed"
+
+  # ──────────────────────────────────────────────
+  # Stage 5: Branch Sync (main → staging → dev)
+  # ──────────────────────────────────────────────
+  branch-sync:
+    name: Branch Sync
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Sync main → staging
+        run: |
+          echo "Syncing main into staging..."
+          if git show-ref --verify --quiet refs/remotes/origin/staging; then
+            git fetch origin staging:staging
+            git checkout staging
+            git merge --no-ff main -m "chore: merge main into staging [skip ci]"
+            git push origin staging
+            echo "Staging branch updated with main"
+          else
+            echo "Staging branch does not exist, skipping"
+          fi
+
+      - name: Sync main → development
+        run: |
+          echo "Syncing main into development..."
+          if git show-ref --verify --quiet refs/remotes/origin/development; then
+            git fetch origin development:development
+            git checkout development
+            git merge --no-ff main -m "chore: merge main into development [skip ci]"
+            git push origin development
+            echo "Development branch updated with main"
+          else
+            echo "Development branch does not exist, skipping"
+          fi
+
+  # ──────────────────────────────────────────────
+  # Stage 6: Release (date-based tag)
+  # ──────────────────────────────────────────────
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Create date-based release tag
+        run: |
+          DATE_TAG="release-$(date +'%Y-%m-%d')"
+          FINAL_TAG="$DATE_TAG"
+          COUNTER=1
+          while git rev-parse "$FINAL_TAG" >/dev/null 2>&1; do
+            FINAL_TAG="${DATE_TAG}.${COUNTER}"
+            COUNTER=$((COUNTER + 1))
+          done
+          git tag -a "$FINAL_TAG" -m "Release $FINAL_TAG"
+          git push origin "$FINAL_TAG"
+          echo "Created release tag: $FINAL_TAG"
