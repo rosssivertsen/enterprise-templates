@@ -1,0 +1,48 @@
+name: "Deploy Gate Agent"
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+    branches: [main]
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Review full changeset
+        run: |
+          echo "Deploy Gate Agent"
+          echo "=================="
+          COMMITS=$(git log --oneline origin/main..HEAD)
+          echo "Commits being promoted to production:"
+          echo "$COMMITS"
+          echo ""
+          FILES=$(git diff --stat origin/main...HEAD)
+          echo "File changes:"
+          echo "$FILES"
+
+      - name: Verify E2E status
+        run: |
+          echo "Checking E2E test results from staging..."
+          echo ""
+          echo "This workflow will:"
+          echo "  1. Review all commits being promoted to main"
+          echo "  2. Verify E2E tests passed on staging"
+          echo "  3. Check for breaking changes or security issues"
+          echo "  4. Approve or block the deployment"
+          echo "  5. Post a summary as a PR review"
+
+      - name: Gate decision
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          echo "Configure LLM provider in .enterprise.yml"
+          echo "Set LLM_API_KEY secret in GitHub repository settings"

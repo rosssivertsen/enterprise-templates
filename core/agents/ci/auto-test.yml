@@ -1,0 +1,48 @@
+name: "Auto-Test Agent"
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  coverage-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect language
+        id: lang
+        run: |
+          if [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; then
+            echo "language=python" >> $GITHUB_OUTPUT
+          elif [ -f "package.json" ]; then
+            echo "language=node" >> $GITHUB_OUTPUT
+          else
+            echo "language=generic" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get changed source files
+        id: changes
+        run: |
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -E '\.(py|ts|js)$' | tr '\n' ' ')
+          echo "source_files=$FILES" >> $GITHUB_OUTPUT
+
+      - name: Check test coverage delta
+        env:
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          echo "Auto-Test Agent"
+          echo "==============="
+          echo "Language: ${{ steps.lang.outputs.language }}"
+          echo "Changed source files: ${{ steps.changes.outputs.source_files }}"
+          echo ""
+          echo "This workflow will:"
+          echo "  1. Run tests and measure coverage before/after changes"
+          echo "  2. Flag source files without corresponding test files"
+          echo "  3. Optionally suggest test cases via LLM"
+          echo "  4. Post coverage delta as PR comment"
