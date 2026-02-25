@@ -19,6 +19,7 @@ NC='\033[0m'
 info()    { echo -e "${BLUE}→${NC} $1"; }
 success() { echo -e "${GREEN}✓${NC} $1"; }
 warn()    { echo -e "${YELLOW}!${NC} $1"; }
+lowercase() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
 
 # --- Banner -------------------------------------------------------------------
 echo ""
@@ -100,7 +101,7 @@ GH_ORG=""
 if [[ "$TIER" == "standard" || "$TIER" == "production" ]]; then
     echo ""
     read -rp "Create GitHub repository? [y/N]: " CREATE_REPO_INPUT
-    if [[ "${CREATE_REPO_INPUT,,}" == "y" || "${CREATE_REPO_INPUT,,}" == "yes" ]]; then
+    if [[ "$(lowercase "$CREATE_REPO_INPUT")" == "y" || "$(lowercase "$CREATE_REPO_INPUT")" == "yes" ]]; then
         CREATE_REPO="yes"
         read -rp "GitHub org (leave blank for personal): " GH_ORG
     fi
@@ -124,7 +125,7 @@ fi
 echo "=========================================="
 echo ""
 read -rp "Proceed? [Y/n]: " CONFIRM
-if [[ "${CONFIRM,,}" == "n" || "${CONFIRM,,}" == "no" ]]; then
+if [[ "$(lowercase "$CONFIRM")" == "n" || "$(lowercase "$CONFIRM")" == "no" ]]; then
     warn "Aborted."
     exit 0
 fi
@@ -137,7 +138,7 @@ PROJECT_DIR="$OUTPUT_DIR/$PROJECT_NAME"
 if [[ -d "$PROJECT_DIR" ]]; then
     warn "Directory $PROJECT_DIR already exists."
     read -rp "Overwrite? [y/N]: " OVERWRITE
-    if [[ "${OVERWRITE,,}" != "y" && "${OVERWRITE,,}" != "yes" ]]; then
+    if [[ "$(lowercase "$OVERWRITE")" != "y" && "$(lowercase "$OVERWRITE")" != "yes" ]]; then
         warn "Aborted."
         exit 1
     fi
