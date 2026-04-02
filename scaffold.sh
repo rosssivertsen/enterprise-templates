@@ -300,6 +300,35 @@ if [[ "$TIER" == "production" ]]; then
 fi
 
 # =============================================================================
+# 5b. Generate AGENTS.md (all tiers — agent-agnostic standards)
+# =============================================================================
+AGENTS_TEMPLATE="$SCRIPT_DIR/core/docs/AGENTS-template.md"
+if [[ -f "$AGENTS_TEMPLATE" ]]; then
+    sed \
+        -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
+        -e "s|{{LANGUAGE}}|$LANGUAGE|g" \
+        -e "s|{{TIER}}|$TIER|g" \
+        "$AGENTS_TEMPLATE" > "$PROJECT_DIR/AGENTS.md"
+    success "Generated AGENTS.md (agent-agnostic standards)"
+fi
+
+# =============================================================================
+# 5c. Generate docs/SESSION_LOG.md and docs/ directory
+# =============================================================================
+mkdir -p "$PROJECT_DIR/docs"
+cat > "$PROJECT_DIR/docs/SESSION_LOG.md" << 'SESSIONEOF'
+# Session Log
+
+> This log tracks all working sessions, decisions, discoveries, and action items.
+> Update with every meaningful progress point. Newest entries at the top.
+> See AGENTS.md for the required entry format.
+
+---
+
+SESSIONEOF
+success "Generated docs/SESSION_LOG.md"
+
+# =============================================================================
 # 6. Generate CLAUDE.md
 # =============================================================================
 CLAUDE_TEMPLATE="$SCRIPT_DIR/core/docs/CLAUDE-template.md"
