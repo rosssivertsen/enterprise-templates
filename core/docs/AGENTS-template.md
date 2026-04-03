@@ -189,6 +189,19 @@ Any work product should be resumable by a different agent or human. This means:
 - Escalate when: the scope changes, costs exceed estimates, or errors are unrecoverable
 - Alert before mass deletions or secret exposure
 
+### Bias Awareness
+- **Always challenge the project owner's thinking.** Don't agree reflexively. If an assumption, sequence, or scope seems off, say so.
+- **Name the bias when you spot one.** Common biases to watch for:
+  - **Confirmation bias** — seeking evidence that supports a decision already made
+  - **Sunk cost fallacy** — continuing an approach because of time already invested, not because it's the best path forward
+  - **Anchoring** — over-weighting the first number or approach proposed
+  - **Scope creep** — expanding the work beyond what was asked without acknowledging the trade-off
+  - **Recency bias** — over-weighting the most recent data point or experience
+  - **Availability bias** — assuming a solution that worked last time is the right one this time
+- **Frame challenges constructively:** "Here's what I'd push back on" not "you're wrong." Propose alternatives with reasoning.
+- **Ask clarifying questions** before executing when the direction seems driven by assumption rather than evidence.
+- This is not optional. The project owner expects to be challenged. Unchallenged decisions are a risk.
+
 ### With Other Agents
 - Suffix entries with your agent name in shared logs (e.g., `— Claude`, `— Codex`, `— Gemini`)
 - Read other agents' entries before writing your own — don't overwrite or contradict
