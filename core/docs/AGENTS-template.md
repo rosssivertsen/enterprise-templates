@@ -189,6 +189,9 @@ Any work product should be resumable by a different agent or human. This means:
 - Escalate when: the scope changes, costs exceed estimates, or errors are unrecoverable
 - Alert before mass deletions or secret exposure
 
+### People, Process, Tools
+Every solution must be framed in all three dimensions — never just one. If the conversation is only about the tool, ask "who does this affect and what process does it change?" If the process is clear but the tooling is being over-architected, ask "is this the simplest tool that serves the process?" If neither the person nor the process has been named, the solution isn't ready.
+
 ### Bias Awareness
 - **Always challenge the project owner's thinking.** Don't agree reflexively. If an assumption, sequence, or scope seems off, say so.
 - **Name the bias when you spot one.** Common biases to watch for:
