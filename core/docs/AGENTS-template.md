@@ -13,6 +13,31 @@
 
 ---
 
+## 0. Delivery Principles
+
+Three pillars guide every decision — what to build, how to build it, and when to abstract.
+
+### Repeatability
+If solving a problem for the second time, abstract it into a reusable tool. If the first time, solve it and document the pattern. If the third time and no reusable tool exists, that's a process failure. Invest upfront in planning when a repeatable pattern is likely — speed to delivery is an outcome of repeatability done well.
+
+### Reliability
+Double-check, triple-check. Dry runs before production. Reconciliation after every batch. End-to-end source document traceability — every output traces back to its source input. Audit trail is a deliverable, not an afterthought. Zero-error tolerance where achievable.
+
+### Scalability
+Will this approach work at 10x volume? Design for the next order of magnitude. If a solution works for 50 records but breaks at 500, document the breakpoint and plan the upgrade path.
+
+### Security (CIA Triad)
+- **Confidentiality** — credentials in env vars or secret stores, never in committed files. Principle of least privilege.
+- **Integrity** — data validated at input and verified at output. Checksums, reconciliation, source verification.
+- **Availability** — crash-resilient state files, documented recovery procedures, no single points of failure in automation.
+
+### Build vs. Script Decision Rule
+> **First time** → solve it, document the pattern.
+> **Second time** → abstract into a reusable tool.
+> **Third time** → it should already be a tool.
+
+---
+
 ## 1. Session Discipline
 
 ### Session Log
@@ -98,7 +123,35 @@ At project completion, produce `docs/PLUS-DELTA-POSTMORTEM.md`:
 
 ---
 
-## 4. Quality Standards
+## 4. Document Generation
+
+### Standard Tool: OfficeCLI
+
+All projects use `officecli` for generating Word (.docx), Excel (.xlsx), and PowerPoint (.pptx) deliverables. No npm packages (`docx`, `exceljs`, `pptxgenjs`), no Python libraries (`python-docx`, `openpyxl`), no custom scripts.
+
+**Why:** Single binary, zero dependencies, no Office installation required. Any agent can produce documents with shell commands or JSON batch — no language-specific libraries to install or maintain.
+
+**Installation:** `curl -fsSL https://raw.githubusercontent.com/iOfficeAI/OfficeCLI/main/install.sh | bash`
+
+**Key commands:**
+```bash
+officecli create report.docx                    # Create blank document
+officecli open report.docx                      # Resident mode (fast multi-op)
+officecli add report.docx /body --type paragraph --prop text="..." --prop style=Heading1
+officecli batch report.docx --json < ops.json   # Batch operations
+officecli view report.docx outline              # Inspect structure
+officecli view report.docx text                 # Extract text
+officecli validate report.docx                  # Schema validation
+officecli close report.docx                     # Save and release
+```
+
+**Batch pattern:** For reports with tables and structured data, build a JSON array of operations and pipe to `officecli batch`. This keeps the document definition declarative and data-driven.
+
+**When NOT to use:** Reading existing Excel data files for analysis — pandas/openpyxl remain the right tool for data processing. OfficeCLI is for *producing* deliverables, not ETL.
+
+---
+
+## 5. Quality Standards
 
 ### Data Integrity
 - Verify inputs before processing (dry runs, checksums, schema validation)
@@ -117,7 +170,7 @@ At project completion, produce `docs/PLUS-DELTA-POSTMORTEM.md`:
 
 ---
 
-## 5. Handoff Standards
+## 6. Handoff Standards
 
 Any work product should be resumable by a different agent or human. This means:
 
@@ -128,7 +181,7 @@ Any work product should be resumable by a different agent or human. This means:
 
 ---
 
-## 6. Communication
+## 7. Communication
 
 ### With the Project Owner
 - Be autonomous but transparent
