@@ -20,6 +20,13 @@ project:
   # Human-readable project name used in dashboards and generated docs.
   name: "my-project"
 
+  # Canonical 3-char REPO-CODE (registered in sherpa-vault/docs/repo-id-registry.md).
+  # All backlog IDs in docs/plans/BACKLOG.md qualify to <REPO_CODE>-<N> or
+  # <REPO_CODE>-<STREAM>-<N> on cross-repo surfaces (Kanban, commits, PRs).
+  # Governance: never change this after project creation — it would break every
+  # cross-reference. A rename is a Lex Immutabilis governance event.
+  repo_code: "XXX"
+
   # Short description of the project's purpose.
   description: "A new enterprise project"
 

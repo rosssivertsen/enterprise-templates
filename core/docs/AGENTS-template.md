@@ -151,7 +151,77 @@ officecli close report.docx                     # Save and release
 
 ---
 
-## 5. Quality Standards
+## 5. Model Routing
+
+### Standard Router: LiteLLM
+
+All agents that need to call an LLM go through **LiteLLM** at `https://litellm.lrs.ai/v1` (or `http://127.0.0.1:4000/v1` on-DGX). Never instantiate a direct provider SDK (`from anthropic import Anthropic`, `from openai import OpenAI` against api.openai.com, etc.) inside CCE agent code.
+
+**Why:** Single binary surface, unified billing layer, per-agent attribution via virtual keys, ability to route to the local inference cluster (DGX Spark + GX10) for free marginal cost when frontier capability isn't required, and the alias contract means backends can move without touching agent code.
+
+**Doctrine reference:** `sherpa-vault/memory/claude-memory/feedback_litellm_only_for_cce_agents.md`
+**Alias contract (what each model name means):** `sherpa-vault/projects/clustered-inference/09-alias-contract.md`
+**VK provisioning SOP:** `sherpa-vault/projects/clustered-inference/10-agent-vk-sop.md`
+
+### Per-agent Virtual Key (required)
+
+Every new agent gets its own VK:
+
+- **Named** `cce-<agent-name>` (kebab-case)
+- **Scoped** to an explicit allowlist of aliases from the contract (never `all-team-models`)
+- **Budget-capped** monthly (even if small — $10 minimum, no uncapped new VKs)
+- **Tagged** `app=<agent-name>` for Langfuse trace attribution
+
+Provision via the SOP. The VK arrives in the agent's `.env` as `LITELLM_VK_<AGENT_UPPER>` (mode 600, never committed).
+
+### Agent code pattern
+
+```python
+import os, sys, openai
+
+# Mandatory: fail loud at startup if env is empty (per feedback_env_substitution_silent_fail)
+for var in ("LITELLM_BASE_URL", "LITELLM_VK_<AGENT_UPPER>"):
+    if not os.environ.get(var):
+        sys.exit(f"FATAL: {var} is empty. See 10-agent-vk-sop.md.")
+
+client = openai.OpenAI(
+    base_url=os.environ["LITELLM_BASE_URL"],
+    api_key=os.environ["LITELLM_VK_<AGENT_UPPER>"],
+)
+
+# Ask for an alias from the contract — NOT a raw provider model name.
+resp = client.chat.completions.create(
+    model="reasoner",   # or workhorse, coding, frontier, research, multimodal, bulk
+    messages=[...],
+)
+```
+
+### Picking an alias
+
+From the contract — three questions answer it:
+
+1. Needs current web information? → `research`
+2. Needs image/video input? → `multimodal`
+3. Otherwise: `workhorse` (default), `reasoner` (deep thinking), `coding` (code gen), `frontier` (quality-critical), `bulk` (high-volume cheap), `workhorse-context` (>32K context).
+
+**Default to local tier.** Cloud aliases (`frontier`, `frontier-pinnacle`, `research`, `bulk`, `multimodal`) are for the 20% of work that genuinely needs them. Cluster is for the 80%.
+
+### Exception: `claude` CLI agents
+
+If your agent runs via the `claude` CLI binary (Pro/Max subscription) instead of needing a provider API key, this rule does not apply — `claude` CLI handles its own auth and rides flat-rate subscription. Examples: overnight-research, batch-route, email-agent classifier. These stay as-is.
+
+The rule applies when you would *otherwise* reach for `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `PERPLEXITY_API_KEY`, etc. in the agent's `.env`.
+
+### Anti-patterns
+
+- `from anthropic import Anthropic` at the top of agent code — replace with `openai.OpenAI(base_url=LITELLM_URL, ...)`
+- Sharing a VK across agents — kills attribution; mint one per agent
+- Hardcoded model strings like `claude-sonnet-4-6` in agent code — use the alias (`frontier`) so backends can move
+- Catching a LiteLLM 401/404 and silently falling back to a direct provider SDK — defeats the doctrine; fail loud
+
+---
+
+## 6. Quality Standards
 
 ### Data Integrity
 - Verify inputs before processing (dry runs, checksums, schema validation)
@@ -168,9 +238,12 @@ officecli close report.docx                     # Save and release
 - Reports include: items processed, items skipped, items errored, totals, timestamps
 - Reports are committed to the repository
 
+### Wargaming (pre-simulation for high-risk missions)
+Missions that are **irreversible or production-touching, fork-rich, and executing within ~2–3 weeks** get a wargame before execution: a move-by-move pre-simulation with expected observations, failure countermoves, fork triggers, abort conditions, and verification runs, written so any executor agent can run it blind. Convention, templates, and executor contract: `docs/wargames/` per `WARGAME-template.md` (this directory). Agent-agnostic by design — the artifact is plain markdown; any agent that can read files can execute it.
+
 ---
 
-## 6. Handoff Standards
+## 7. Handoff Standards
 
 Any work product should be resumable by a different agent or human. This means:
 
@@ -181,7 +254,7 @@ Any work product should be resumable by a different agent or human. This means:
 
 ---
 
-## 7. Communication
+## 8. Communication
 
 ### With the Project Owner
 - Be autonomous but transparent

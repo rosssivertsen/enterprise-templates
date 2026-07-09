@@ -10,6 +10,11 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# --- Repo ID Registry (Lex Immutabilis governance) ---------------------------
+# Canonical source of truth for all REPO-CODE assignments. Set REPO_ID_REGISTRY
+# env var to override (useful for CI or non-Ross machines).
+REPO_ID_REGISTRY="${REPO_ID_REGISTRY:-$HOME/Library/Mobile Documents/iCloud~md~obsidian/Documents/sherpa-vault/docs/repo-id-registry.md}"
+
 # --- Colors -------------------------------------------------------------------
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -20,6 +25,39 @@ info()    { echo -e "${BLUE}→${NC} $1"; }
 success() { echo -e "${GREEN}✓${NC} $1"; }
 warn()    { echo -e "${YELLOW}!${NC} $1"; }
 lowercase() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+uppercase() { printf '%s' "$1" | tr '[:lower:]' '[:upper:]'; }
+
+# --- Registry helpers --------------------------------------------------------
+# Propose a 3-char REPO-CODE from a kebab-case project name.
+# my-cool-app → MCA (initials), fallback to first 3 consonants uppercase.
+propose_repo_code() {
+    local name="$1"
+    local proposal
+    # Try initials of hyphen-separated parts (my-cool-app → MCA)
+    proposal=$(echo "$name" | awk -F- '{for(i=1;i<=NF;i++) printf "%s", toupper(substr($i,1,1))}')
+    # If we got fewer than 3 chars (e.g., single-word name), take first 3 uppercased
+    if [[ ${#proposal} -lt 3 ]]; then
+        proposal=$(uppercase "${name:0:3}" | tr -d '-')
+    fi
+    # Pad with 'X' if still short
+    while [[ ${#proposal} -lt 3 ]]; do
+        proposal="${proposal}X"
+    done
+    # Take only first 3 chars
+    echo "${proposal:0:3}"
+}
+
+# Check whether a code already exists in the registry (active, reserved, or retired).
+# Returns 0 if collision, 1 if free.
+# Matches: | **CODE** | (active rows), | CODE | (some rows), | CODE- | (retired rows
+# where the old code had a trailing hyphen), and prose mentions in reserved/retired.
+code_has_collision() {
+    local code="$1"
+    if [[ ! -f "$REPO_ID_REGISTRY" ]]; then
+        return 1  # no registry found, can't check
+    fi
+    grep -qE "\*\*${code}\*\*|^\| ${code}(-|\s)" "$REPO_ID_REGISTRY"
+}
 
 # --- Banner -------------------------------------------------------------------
 echo ""
@@ -40,6 +78,40 @@ while true; do
     fi
     warn "Invalid name. Use kebab-case (lowercase letters, numbers, hyphens). Must start with a letter."
 done
+
+# --- REPO-CODE (Lex Immutabilis governance) ----------------------------------
+# Every project owns a globally-unique 3-char code, registered in
+# sherpa-vault/docs/repo-id-registry.md. Backlog IDs qualify to <CODE>-<N> on
+# all cross-repo surfaces (Kanban, commit messages, PR titles).
+echo ""
+if [[ ! -f "$REPO_ID_REGISTRY" ]]; then
+    warn "Registry not found at $REPO_ID_REGISTRY"
+    warn "Collision check disabled. Proceed carefully — manually verify the code is globally unique."
+fi
+
+PROPOSED_CODE=$(propose_repo_code "$PROJECT_NAME")
+info "Proposed REPO-CODE for '$PROJECT_NAME': $PROPOSED_CODE"
+
+while true; do
+    read -rp "REPO-CODE (3 uppercase chars) [$PROPOSED_CODE]: " REPO_CODE_INPUT
+    REPO_CODE="${REPO_CODE_INPUT:-$PROPOSED_CODE}"
+    REPO_CODE=$(uppercase "$REPO_CODE")
+
+    if [[ ! "$REPO_CODE" =~ ^[A-Z]{3}$ ]]; then
+        warn "Invalid code. Must be exactly 3 uppercase letters."
+        continue
+    fi
+
+    if code_has_collision "$REPO_CODE"; then
+        warn "Code '$REPO_CODE' collides with an active, reserved, or retired entry in the registry."
+        warn "Pick another — see: $REPO_ID_REGISTRY"
+        continue
+    fi
+
+    break
+done
+REPO_CODE_LOWER=$(lowercase "$REPO_CODE")
+success "REPO-CODE: $REPO_CODE"
 
 # --- Language -----------------------------------------------------------------
 echo ""
@@ -113,6 +185,7 @@ fi
 echo ""
 echo "=========================================="
 info "Project:    $PROJECT_NAME"
+info "REPO-CODE:  $REPO_CODE"
 info "Language:   $LANGUAGE"
 info "Tier:       $TIER"
 info "Output:     $OUTPUT_DIR/$PROJECT_NAME"
@@ -260,6 +333,7 @@ if [[ "$TIER" == "standard" || "$TIER" == "production" ]]; then
     if [[ -f "$ENTERPRISE_TEMPLATE" ]]; then
         sed \
             -e "s|name: \"my-project\"|name: \"$PROJECT_NAME\"|g" \
+            -e "s|repo_code: \"XXX\"|repo_code: \"$REPO_CODE\"|g" \
             -e "s|language: \"python\"|language: \"$LANGUAGE\"|g" \
             -e "s|tier: \"standard\"|tier: \"$TIER\"|g" \
             -e "s|provider: \"anthropic\"|provider: \"$PROVIDER\"|g" \
@@ -327,6 +401,24 @@ cat > "$PROJECT_DIR/docs/SESSION_LOG.md" << 'SESSIONEOF'
 
 SESSIONEOF
 success "Generated docs/SESSION_LOG.md"
+
+# =============================================================================
+# 5d. Generate docs/plans/BACKLOG.md (canonical, tier-differentiated)
+# =============================================================================
+mkdir -p "$PROJECT_DIR/docs/plans"
+BACKLOG_TEMPLATE="$SCRIPT_DIR/core/docs/BACKLOG-$TIER-template.md"
+if [[ -f "$BACKLOG_TEMPLATE" ]]; then
+    SCAFFOLD_DATE="$(date +%Y-%m-%d)"
+    sed \
+        -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
+        -e "s|{{REPO_CODE}}|$REPO_CODE|g" \
+        -e "s|{{REPO_CODE_LOWER}}|$REPO_CODE_LOWER|g" \
+        -e "s|{{SCAFFOLD_DATE}}|$SCAFFOLD_DATE|g" \
+        "$BACKLOG_TEMPLATE" > "$PROJECT_DIR/docs/plans/BACKLOG.md"
+    success "Generated docs/plans/BACKLOG.md ($TIER tier, REPO-CODE $REPO_CODE)"
+else
+    warn "No BACKLOG-$TIER-template.md found; skipping canonical backlog generation"
+fi
 
 # =============================================================================
 # 6. Generate CLAUDE.md
@@ -484,15 +576,38 @@ if [[ "$CREATE_REPO" == "yes" ]]; then
 fi
 
 # =============================================================================
+# 11. Append REPO-CODE to the canonical ID registry (Lex Immutabilis)
+# =============================================================================
+if [[ -f "$REPO_ID_REGISTRY" ]]; then
+    REGISTRY_ROW="| **${REPO_CODE}** | repo | \`${PROJECT_NAME}\` (${PROJECT_DIR/#$HOME/~}) | \`docs/plans/BACKLOG.md\` | — | $(date +%Y-%m-%d) |"
+    MARKER="<!-- scaffold-append-repo —"
+    if grep -q "$MARKER" "$REPO_ID_REGISTRY"; then
+        # macOS sed -i requires empty string backup suffix
+        sed -i '' "/${MARKER}/i\\
+${REGISTRY_ROW}
+" "$REPO_ID_REGISTRY"
+        success "Registered ${REPO_CODE} → ${PROJECT_NAME} in $REPO_ID_REGISTRY"
+    else
+        warn "Registry append marker not found — append manually:"
+        warn "  $REGISTRY_ROW"
+    fi
+else
+    warn "Registry not found; skipping auto-registration."
+    warn "Manually add row to the registry when you're back on the main machine:"
+    warn "  | **${REPO_CODE}** | repo | \`${PROJECT_NAME}\` | \`docs/plans/BACKLOG.md\` | — | $(date +%Y-%m-%d) |"
+fi
+
+# =============================================================================
 # Done
 # =============================================================================
 echo ""
 echo "=========================================="
 success "Project $PROJECT_NAME created successfully!"
 echo ""
-info "Location: $PROJECT_DIR"
-info "Language: $LANGUAGE"
-info "Tier:     $TIER"
+info "Location:   $PROJECT_DIR"
+info "REPO-CODE:  $REPO_CODE (first backlog item will be ${REPO_CODE}-1)"
+info "Language:   $LANGUAGE"
+info "Tier:       $TIER"
 echo ""
 info "Next steps:"
 echo "  cd $PROJECT_DIR"
