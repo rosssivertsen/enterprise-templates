@@ -468,6 +468,15 @@ if [[ -f "$CLAUDE_TEMPLATE" ]]; then
 fi
 
 # =============================================================================
+# 6b. Generate GEMINI.md (thin shim that imports AGENTS.md; Codex reads AGENTS.md natively)
+# =============================================================================
+GEMINI_TEMPLATE="$SCRIPT_DIR/core/docs/GEMINI-template.md"
+if [[ -f "$GEMINI_TEMPLATE" ]]; then
+    cp "$GEMINI_TEMPLATE" "$PROJECT_DIR/GEMINI.md"
+    success "Generated GEMINI.md (imports AGENTS.md)"
+fi
+
+# =============================================================================
 # 7. Generate README.md
 # =============================================================================
 README_TEMPLATE="$SCRIPT_DIR/core/docs/README-template.md"
