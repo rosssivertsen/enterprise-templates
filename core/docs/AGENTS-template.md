@@ -186,9 +186,19 @@ officecli close report.docx                     # Save and release
 
 ## 5. Model Routing
 
+### Scope: when this section applies
+
+LiteLLM is the router for **CCE internal and development work that may use the local
+inference cluster** (DGX Spark + GX10). It is **not** for production work or client
+deliverables. Production and client code calls its LLM provider directly, as configured
+in `.enterprise.yml` (`agents.default.provider`), so it never depends on CCE's private
+router after handoff.
+
+If this project is production or client work, skip the rest of this section.
+
 ### Standard Router: LiteLLM
 
-All agents that need to call an LLM go through **LiteLLM** at `https://litellm.lrs.ai/v1` (or `http://127.0.0.1:4000/v1` on-DGX). Never instantiate a direct provider SDK (`from anthropic import Anthropic`, `from openai import OpenAI` against api.openai.com, etc.) inside CCE agent code.
+In scope (see above), agents that need to call an LLM go through **LiteLLM** at `https://litellm.lrs.ai/v1` (or `http://127.0.0.1:4000/v1` on-DGX). Never instantiate a direct provider SDK (`from anthropic import Anthropic`, `from openai import OpenAI` against api.openai.com, etc.) inside CCE agent code.
 
 **Why:** Single binary surface, unified billing layer, per-agent attribution via virtual keys, ability to route to the local inference cluster (DGX Spark + GX10) for free marginal cost when frontier capability isn't required, and the alias contract means backends can move without touching agent code.
 
