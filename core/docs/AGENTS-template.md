@@ -34,6 +34,10 @@ _What this project does, who it is for, and who owns it. Replace this line._
 
 {{ARCHITECTURE}}
 
+### Configuration
+
+{{PROJECT_CONFIG}}
+
 ### Hard Rules
 
 _Project-specific constraints every agent must follow: data that must never be committed, systems that are read-only, actions that need the owner's approval. Replace this line, or write "None"._

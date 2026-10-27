@@ -481,6 +481,13 @@ case "$LANGUAGE" in
         ;;
 esac
 
+# Tier-dependent configuration note (only Standard/Production get .enterprise.yml)
+if [[ "$TIER" == "lite" ]]; then
+    PROJECT_CONFIG="Lite tier: no \`.enterprise.yml\`. Configuration lives in the project's own files (Makefile, lint and test configs)."
+else
+    PROJECT_CONFIG="This project uses \`.enterprise.yml\` for CI/CD, agent, and deployment configuration. See the file for all available settings."
+fi
+
 # =============================================================================
 # 5b. Generate AGENTS.md (all tiers — agent-agnostic standards)
 # =============================================================================
@@ -494,6 +501,7 @@ if [[ -f "$AGENTS_TEMPLATE" ]]; then
         -e "s|{{COMMANDS_TEST}}|$COMMANDS_TEST|g" \
         -e "s|{{COMMANDS_DEPLOY}}|$COMMANDS_DEPLOY|g" \
         -e "s|{{ARCHITECTURE}}|$ARCHITECTURE|g" \
+        -e "s|{{PROJECT_CONFIG}}|$PROJECT_CONFIG|g" \
         "$AGENTS_TEMPLATE" > "$PROJECT_DIR/AGENTS.md"
     success "Generated AGENTS.md (agent-agnostic standards)"
 fi

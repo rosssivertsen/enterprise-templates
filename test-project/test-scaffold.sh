@@ -184,7 +184,9 @@ run_test "E2E lite/generic: scaffold.sh --yes produces the multi-agent files" \
      (for f in AGENTS.md CLAUDE.md GEMINI.md README.md CHANGELOG.md docs/SESSION_LOG.md docs/plans/BACKLOG.md; do test -f '$E2E_DIR/e2e-lite/'\$f || exit 1; done) && \
      grep -q '^@AGENTS.md' '$E2E_DIR/e2e-lite/CLAUDE.md' && \
      grep -q '^@./AGENTS.md' '$E2E_DIR/e2e-lite/GEMINI.md' && \
-     grep -q '## Project Context' '$E2E_DIR/e2e-lite/AGENTS.md'"
+     grep -q '## Project Context' '$E2E_DIR/e2e-lite/AGENTS.md' && \
+     grep -q 'Lite tier: no' '$E2E_DIR/e2e-lite/AGENTS.md' && \
+     ! grep -rq 'uses .\.enterprise\.yml' '$E2E_DIR/e2e-lite' --exclude-dir=.git"
 
 run_test "E2E standard/python: scaffold.sh --yes adds CI, skills and .enterprise.yml" \
     "eval \"$E2E_RUN --name e2e-std --code ZZS --language python --tier standard\" && \
