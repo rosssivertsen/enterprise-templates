@@ -60,7 +60,7 @@ Applies to: **standard, production** (disabled for lite)
 |-------|------|---------|-------|-------------|
 | `agents.enabled` | `boolean` | `true` | standard, production | Master switch to enable or disable all AI agent features. |
 | `agents.default.provider` | `string` | `"anthropic"` | standard, production | LLM provider identifier used by all agent roles unless overridden. |
-| `agents.default.model` | `string` | `"claude-sonnet-4-20250514"` | standard, production | Model used for agent tasks unless overridden per role. |
+| `agents.default.model` | `string` | `"claude-opus-5-5"` | standard, production | Model used for agent tasks unless overridden per role. |
 | `agents.default.api_key_env` | `string` | `"LLM_API_KEY"` | standard, production | Name of the environment variable holding the API key. The key itself is never stored in this file. |
 | `agents.overrides.code_review` | `object` | *(commented out)* | production | Per-role model override for the code-review agent. Inherits from `default`. |
 | `agents.overrides.test_writer` | `object` | *(commented out)* | production | Per-role model override for the test-writer agent. Inherits from `default`. |

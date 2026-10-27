@@ -98,7 +98,7 @@ agents:
     provider: "anthropic"
 
     # Model to use for agent tasks.
-    model: "claude-sonnet-4-20250514"
+    model: "claude-opus-5-5"
 
     # Name of the environment variable that holds the API key.
     # The key itself is NEVER stored in this file.
@@ -111,13 +111,13 @@ agents:
   # overrides:
   #   code_review:
   #     provider: "anthropic"
-  #     model: "claude-sonnet-4-20250514"
+  #     model: "claude-opus-5-5"
   #   test_writer:
   #     provider: "anthropic"
-  #     model: "claude-sonnet-4-20250514"
+  #     model: "claude-opus-5-5"
   #   pr_review:
   #     provider: "anthropic"
-  #     model: "claude-sonnet-4-20250514"
+  #     model: "claude-opus-5-5"
 
   # Local skills — agent capabilities available in the local dev environment.
   local:

@@ -231,7 +231,7 @@ Edit the `agents:` section in `.enterprise.yml`:
 agents:
   enabled: true
   provider: anthropic       # anthropic | openai | local
-  model: claude-sonnet-4-20250514   # optional: override default model
+  model: claude-opus-5-5   # optional: override default model
 ```
 
 The LLM abstraction layer in `core/agents/llm-abstraction/` routes requests to

@@ -53,7 +53,7 @@ export function getAgentConfig(role: string = 'default', configPath?: string): L
   const roleConfig = role !== 'default' && agents[role] ? agents[role] : agents.default || {};
   return {
     provider: roleConfig.provider || 'anthropic',
-    model: roleConfig.model || 'claude-sonnet-4-20250514',
+    model: roleConfig.model || 'claude-opus-5-5',
     apiKeyEnv: roleConfig.api_key_env || 'LLM_API_KEY',
   };
 }

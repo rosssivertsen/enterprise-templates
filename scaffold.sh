@@ -237,11 +237,11 @@ if [[ "$TIER" == "standard" || "$TIER" == "production" ]]; then
         echo ""
         info "AI Agent Configuration"
         [[ -n "$PROVIDER" ]]    || read -rp "AI provider [anthropic]: " PROVIDER
-        [[ -n "$MODEL" ]]       || read -rp "AI model [claude-sonnet-4-20250514]: " MODEL
+        [[ -n "$MODEL" ]]       || read -rp "AI model [claude-opus-5-5]: " MODEL
         [[ -n "$API_KEY_ENV" ]] || read -rp "API key env variable [LLM_API_KEY]: " API_KEY_ENV
     fi
     PROVIDER="${PROVIDER:-anthropic}"
-    MODEL="${MODEL:-claude-sonnet-4-20250514}"
+    MODEL="${MODEL:-claude-opus-5-5}"
     API_KEY_ENV="${API_KEY_ENV:-LLM_API_KEY}"
 fi
 
@@ -420,7 +420,7 @@ if [[ "$TIER" == "standard" || "$TIER" == "production" ]]; then
             -e "s|language: \"python\"|language: \"$LANGUAGE\"|g" \
             -e "s|tier: \"standard\"|tier: \"$TIER\"|g" \
             -e "s|provider: \"anthropic\"|provider: \"$PROVIDER\"|g" \
-            -e "s|model: \"claude-sonnet-4-20250514\"|model: \"$MODEL\"|g" \
+            -e "s|model: \"claude-opus-5-5\"|model: \"$MODEL\"|g" \
             -e "s|api_key_env: \"LLM_API_KEY\"|api_key_env: \"$API_KEY_ENV\"|g" \
             "$ENTERPRISE_TEMPLATE" > "$PROJECT_DIR/.enterprise.yml"
         success "Generated .enterprise.yml"

@@ -68,7 +68,7 @@ def get_client(role: str = "default", config_path: str = None):
     """Return an LLM client configured for the specified agent role."""
     agent_config = get_agent_config(role, config_path)
     provider = agent_config.get("provider", "anthropic")
-    model = agent_config.get("model", "claude-sonnet-4-20250514")
+    model = agent_config.get("model", "claude-opus-5-5")
     api_key_env = agent_config.get("api_key_env", "LLM_API_KEY")
     api_key = os.getenv(api_key_env, "") if api_key_env else None
 
