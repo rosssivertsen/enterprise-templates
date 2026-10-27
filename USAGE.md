@@ -1,34 +1,80 @@
 # Usage Guide
 
 **Version:** 2.0.0
-**Last Updated:** February 2026
+**Last Updated:** October 2026
 
 ---
 
 ## Scaffolding a New Project
 
-Run the interactive CLI from the repository root:
+`scaffold.sh` is the only supported way to create a project. Don't copy template
+files by hand: hand-copied projects drift from the templates.
+
+### Interactive
 
 ```bash
-./scaffold.sh my-project
+./scaffold.sh
 ```
 
-The CLI prompts you for:
+It prompts for project name, REPO-CODE, language, tier, output directory and,
+for Standard/Production, AI provider settings and GitHub repo creation.
 
-1. **Language** — Python, Node/TypeScript, or Generic
-2. **Tier** — Lite, Standard, or Production
-3. **Optional features** — Docker, AI agents, additional CI steps
-
-When finished, your new project directory contains all selected files, a
-pre-configured `.enterprise.yml` manifest, and a ready-to-use Git repository.
-
-### Non-Interactive Mode
-
-Pass flags to skip prompts:
+### Non-interactive (agents and CI)
 
 ```bash
-./scaffold.sh my-project --lang python --tier production --docker --agents
+./scaffold.sh --name my-project --language python --tier standard \
+              --output ~/dev --github --yes
 ```
+
+| Flag | Meaning |
+|---|---|
+| `--name NAME` | Project name, kebab-case. Required with `--yes`. |
+| `--code CODE` | 3-letter REPO-CODE. Default: proposed from the name. |
+| `--language LANG` | `python`, `node` or `generic`. Required with `--yes`. |
+| `--tier TIER` | `lite`, `standard` or `production`. Required with `--yes`. |
+| `--output DIR` | Parent directory. Default `~/dev`. |
+| `--provider`, `--model`, `--api-key-env` | `.enterprise.yml` agent settings (Standard/Production). |
+| `--github [ORG]` / `--no-github` | Create a private GitHub repo (personal account if no ORG), or not. |
+| `--yes`, `-y` | Accept defaults and skip confirmation. |
+
+With `--yes`, a missing required value, an invalid value or a REPO-CODE that is
+already registered stops the script with an error, and an existing project
+directory is never overwritten.
+
+Set `REPO_ID_REGISTRY` to point at a different registry file. For a dry run,
+point it at an empty temp file so the real registry is not touched:
+
+```bash
+REPO_ID_REGISTRY="$(mktemp)" ./scaffold.sh --name my-project --code ZZZ \
+  --language generic --tier lite --output /tmp/scaffold-dry-run --no-github --yes
+```
+
+The "Registry append marker not found" warning is expected in a dry run.
+
+### Every project gets
+
+| File | Purpose |
+|---|---|
+| `AGENTS.md` | Standards **and all project facts** (overview, commands, architecture, hard rules). Read by every agent. |
+| `CLAUDE.md` | Imports `AGENTS.md` (`@AGENTS.md`); holds only Claude Code–specific extensions. |
+| `GEMINI.md` | Imports `AGENTS.md` (`@./AGENTS.md`); holds only Gemini CLI–specific extensions. Codex reads `AGENTS.md` directly. |
+| `README.md`, `CHANGELOG.md` | Human-facing overview and change history. |
+| `docs/SESSION_LOG.md` | Progress journal; every entry names the agent that wrote it. |
+| `docs/plans/BACKLOG.md` | Backlog using the project's REPO-CODE (`ABC-1`, `ABC-2`, ...). |
+
+### For AI agents
+
+Any agent (Claude, Codex, Gemini, ...) scaffolding a project follows these steps:
+
+1. Work out name, language and tier from the request. Ask the owner only for what
+   you can't infer. Propose a REPO-CODE and check it isn't already in the registry.
+2. Run `scaffold.sh` with flags and `--yes` (see above). Don't hand-copy templates.
+3. Fill in `AGENTS.md` → **Project Context**: Overview and Hard Rules, and adjust
+   Commands and Architecture. Project facts go in `AGENTS.md` only, never in
+   `CLAUDE.md` or `GEMINI.md`.
+4. Fill in the README description and architecture.
+5. Write the first `docs/SESSION_LOG.md` entry, ending its heading with your agent name.
+6. Commit with a message starting with the REPO-CODE.
 
 ---
 
@@ -97,23 +143,27 @@ For the complete schema with all fields and defaults, see
 
 ---
 
-## Upgrading a Project's Tier
+## Upgrading or Re-aligning an Existing Project
 
-You can upgrade at any time by re-running the scaffolder:
+`scaffold.sh` has no upgrade mode. To move a project to a higher tier, or to bring an
+older project in line with the current templates:
 
-```bash
-./scaffold.sh my-project --tier production --upgrade
-```
+1. Scaffold a reference copy into a temp directory with the project's name, language
+   and target tier. Use an empty temp registry, because the project's REPO-CODE is
+   already registered:
 
-The `--upgrade` flag preserves your existing source code and configuration while
-adding the new tier's files (additional CI steps, Docker compose, documentation
-templates, etc.). It will not overwrite files you have modified.
+   ```bash
+   REPO_ID_REGISTRY="$(mktemp)" ./scaffold.sh --name my-project --code ABC \
+     --language python --tier standard --output /tmp/realign --no-github --yes
+   ```
 
-You can also upgrade manually:
+   Ignore the "Registry append marker not found" warning: it is expected with a temp registry.
 
-1. Update `tier:` in `.enterprise.yml`
-2. Copy the additional template files from `core/` into your project
-3. Update your CI workflow to reference the new pipeline template
+2. Copy the files the project lacks from `/tmp/realign/my-project/`.
+3. For files the project already has (`AGENTS.md`, `CLAUDE.md`, `README.md`), take the
+   new template version and move the project's own content into its slots. In
+   particular, move project facts out of `CLAUDE.md` into `AGENTS.md` → Project Context.
+4. Review the diff, then commit with the REPO-CODE prefix.
 
 ---
 

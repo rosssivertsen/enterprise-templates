@@ -7,17 +7,20 @@
 
 Enterprise Templates is a language-agnostic project scaffolding platform that generates
 production-ready repositories with tiered CI/CD pipelines, testing infrastructure,
-Docker support, and AI coding agents — all configured through an interactive CLI and
-a single `.enterprise.yml` manifest.
+Docker support, and AI coding agents — configured through `scaffold.sh` (interactive, or
+non-interactive with flags for agents and CI) and a single `.enterprise.yml` manifest.
+Generated projects are multi-agent: `AGENTS.md` holds the standards and project facts,
+and `CLAUDE.md` / `GEMINI.md` import it.
 
 ## Quick Start
 
 ```bash
-./scaffold.sh my-project
+./scaffold.sh                                                   # interactive
+./scaffold.sh --name my-project --language python --tier lite --yes   # agents / CI
 ```
 
-The interactive CLI walks you through language, tier, and feature selection, then
-generates a fully configured project directory.
+See [USAGE.md](USAGE.md#scaffolding-a-new-project) for all flags and the step-by-step
+procedure every agent follows.
 
 ## Tiers
 

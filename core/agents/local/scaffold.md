@@ -39,9 +39,12 @@ if [ ! -d "$TEMPLATE_DIR" ]; then
 fi
 
 cd "$TEMPLATE_DIR"
-# Run scaffold non-interactively by piping answers
-# Or execute the steps directly using file creation tools
+./scaffold.sh --name <name> --code <ABC> --language <python|node|generic> \
+              --tier <lite|standard|production> --output <dir> [--github [ORG]|--no-github] --yes
 ```
+
+Always run `scaffold.sh`; never recreate the templates by hand. Afterwards follow
+"For AI agents" in `USAGE.md`: project facts go in `AGENTS.md` → Project Context only.
 
 Alternatively, perform the scaffolding directly using Claude Code tools:
 1. Create the project directory
