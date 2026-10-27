@@ -90,6 +90,8 @@ Each session entry must include:
 
 Newest entries at the top. Never delete old entries.
 
+**Agent attribution:** several agents may work on this project. Every entry heading names the agent that wrote it, e.g. `## 2026-10-27 — Repository setup — Claude` (or `— Codex`, `— Gemini`, `— <human name>`). Read entries by other agents before writing your own; don't rewrite them. If you disagree with one, say so in your own entry.
+
 ### State Files
 
 For long-running or interruptible work, maintain a JSON state file (e.g., `migration-state.json`, `batch-state.json`) that captures exact pickup points. Any agent should be able to read the state file and continue the work.

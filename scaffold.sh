@@ -425,6 +425,7 @@ cat > "$PROJECT_DIR/docs/SESSION_LOG.md" << 'SESSIONEOF'
 > This log tracks all working sessions, decisions, discoveries, and action items.
 > Update with every meaningful progress point. Newest entries at the top.
 > See AGENTS.md for the required entry format.
+> Every entry heading ends with the agent that wrote it: `## YYYY-MM-DD — Title — Claude` (or Codex, Gemini, a person).
 
 ---
 
