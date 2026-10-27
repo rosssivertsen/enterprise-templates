@@ -5,7 +5,10 @@ set -euo pipefail
 # scaffold.sh — Interactive CLI for Enterprise Project Generation
 # =============================================================================
 # Generates new projects from enterprise templates with tier-based features.
-# Usage: ./scaffold.sh
+# Usage: ./scaffold.sh                 (interactive)
+#        ./scaffold.sh --name my-app --language python --tier lite --yes
+#                                       (non-interactive, for agents and CI)
+# Run ./scaffold.sh --help for all flags.
 # =============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -59,6 +62,64 @@ code_has_collision() {
     grep -qE "\*\*${code}\*\*|^\| ${code}(-|\s)" "$REPO_ID_REGISTRY"
 }
 
+# --- Flags (non-interactive mode) --------------------------------------------
+# Any value given as a flag skips its prompt. With --yes, values not given use
+# their defaults, missing required values are an error, and an existing project
+# directory aborts instead of being overwritten.
+die() { echo -e "\033[0;31m✗\033[0m $1" >&2; exit 1; }
+usage() {
+    cat <<'USAGE'
+Usage: scaffold.sh [flags]
+
+  --name NAME           Project name, kebab-case (required with --yes)
+  --code CODE           3-letter REPO-CODE (default: proposed from name)
+  --language LANG       python | node | generic (required with --yes)
+  --tier TIER           lite | standard | production (required with --yes)
+  --output DIR          Parent directory (default: ~/dev)
+  --provider NAME       AI provider for .enterprise.yml (standard/production)
+  --model NAME          AI model for .enterprise.yml (standard/production)
+  --api-key-env VAR     API key env var name (standard/production)
+  --github [ORG]        Create a private GitHub repo (personal if ORG omitted)
+  --no-github           Do not create a GitHub repo
+  --yes, -y             Non-interactive: accept defaults, skip confirmation
+  --help, -h            Show this help
+
+Env: REPO_ID_REGISTRY overrides the registry path (use a copy for dry runs).
+USAGE
+}
+
+PROJECT_NAME=""; REPO_CODE_FLAG=""; LANGUAGE=""; TIER=""; OUTPUT_DIR_FLAG=""
+PROVIDER_FLAG=""; MODEL_FLAG=""; API_KEY_ENV_FLAG=""; GITHUB_FLAG=""; GH_ORG_FLAG=""
+ASSUME_YES="no"
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --name)        PROJECT_NAME="${2:-}"; shift 2 ;;
+        --code)        REPO_CODE_FLAG="${2:-}"; shift 2 ;;
+        --language)    LANGUAGE="${2:-}"; shift 2 ;;
+        --tier)        TIER="${2:-}"; shift 2 ;;
+        --output)      OUTPUT_DIR_FLAG="${2:-}"; shift 2 ;;
+        --provider)    PROVIDER_FLAG="${2:-}"; shift 2 ;;
+        --model)       MODEL_FLAG="${2:-}"; shift 2 ;;
+        --api-key-env) API_KEY_ENV_FLAG="${2:-}"; shift 2 ;;
+        --github)
+            GITHUB_FLAG="yes"
+            if [[ -n "${2:-}" && "${2:-}" != --* ]]; then GH_ORG_FLAG="$2"; shift 2; else shift; fi ;;
+        --no-github)   GITHUB_FLAG="no"; shift ;;
+        --yes|-y)      ASSUME_YES="yes"; shift ;;
+        --help|-h)     usage; exit 0 ;;
+        *)             usage; die "Unknown flag: $1" ;;
+    esac
+done
+if [[ "$ASSUME_YES" == "yes" ]]; then
+    [[ -n "$PROJECT_NAME" ]] || die "--name is required with --yes"
+    [[ -n "$LANGUAGE" ]]     || die "--language is required with --yes"
+    [[ -n "$TIER" ]]         || die "--tier is required with --yes"
+fi
+case "$LANGUAGE" in ""|python|node|generic) ;; *) die "Invalid --language: $LANGUAGE" ;; esac
+case "$TIER" in ""|lite|standard|production) ;; *) die "Invalid --tier: $TIER" ;; esac
+NONINTERACTIVE_CODE="no"
+[[ -n "$REPO_CODE_FLAG" || "$ASSUME_YES" == "yes" ]] && NONINTERACTIVE_CODE="yes"
+
 # --- Banner -------------------------------------------------------------------
 echo ""
 echo "=========================================="
@@ -72,11 +133,13 @@ echo ""
 
 # --- Project Name (kebab-case) ------------------------------------------------
 while true; do
-    read -rp "Project name (kebab-case, e.g. my-cool-app): " PROJECT_NAME
+    [[ -n "$PROJECT_NAME" ]] || read -rp "Project name (kebab-case, e.g. my-cool-app): " PROJECT_NAME
     if [[ "$PROJECT_NAME" =~ ^[a-z][a-z0-9]*(-[a-z0-9]+)*$ ]]; then
         break
     fi
+    [[ "$ASSUME_YES" == "yes" ]] && die "Invalid --name '$PROJECT_NAME'. Use kebab-case."
     warn "Invalid name. Use kebab-case (lowercase letters, numbers, hyphens). Must start with a letter."
+    PROJECT_NAME=""
 done
 
 # --- REPO-CODE (Lex Immutabilis governance) ----------------------------------
@@ -93,16 +156,22 @@ PROPOSED_CODE=$(propose_repo_code "$PROJECT_NAME")
 info "Proposed REPO-CODE for '$PROJECT_NAME': $PROPOSED_CODE"
 
 while true; do
-    read -rp "REPO-CODE (3 uppercase chars) [$PROPOSED_CODE]: " REPO_CODE_INPUT
+    if [[ "$NONINTERACTIVE_CODE" == "yes" ]]; then
+        REPO_CODE_INPUT="$REPO_CODE_FLAG"
+    else
+        read -rp "REPO-CODE (3 uppercase chars) [$PROPOSED_CODE]: " REPO_CODE_INPUT
+    fi
     REPO_CODE="${REPO_CODE_INPUT:-$PROPOSED_CODE}"
     REPO_CODE=$(uppercase "$REPO_CODE")
 
     if [[ ! "$REPO_CODE" =~ ^[A-Z]{3}$ ]]; then
+        [[ "$NONINTERACTIVE_CODE" == "yes" ]] && die "Invalid REPO-CODE '$REPO_CODE'. Must be exactly 3 letters."
         warn "Invalid code. Must be exactly 3 uppercase letters."
         continue
     fi
 
     if code_has_collision "$REPO_CODE"; then
+        [[ "$NONINTERACTIVE_CODE" == "yes" ]] && die "REPO-CODE '$REPO_CODE' is already in the registry ($REPO_ID_REGISTRY). Pass a free code with --code."
         warn "Code '$REPO_CODE' collides with an active, reserved, or retired entry in the registry."
         warn "Pick another — see: $REPO_ID_REGISTRY"
         continue
@@ -114,36 +183,43 @@ REPO_CODE_LOWER=$(lowercase "$REPO_CODE")
 success "REPO-CODE: $REPO_CODE"
 
 # --- Language -----------------------------------------------------------------
-echo ""
-info "Select language:"
-echo "  1) python"
-echo "  2) node"
-echo "  3) generic"
-read -rp "Language [1/2/3]: " LANG_CHOICE
-case "$LANG_CHOICE" in
-    1|python)  LANGUAGE="python" ;;
-    2|node)    LANGUAGE="node" ;;
-    3|generic) LANGUAGE="generic" ;;
-    *)         warn "Invalid choice, defaulting to generic."; LANGUAGE="generic" ;;
-esac
+if [[ -z "$LANGUAGE" ]]; then
+    echo ""
+    info "Select language:"
+    echo "  1) python"
+    echo "  2) node"
+    echo "  3) generic"
+    read -rp "Language [1/2/3]: " LANG_CHOICE
+    case "$LANG_CHOICE" in
+        1|python)  LANGUAGE="python" ;;
+        2|node)    LANGUAGE="node" ;;
+        3|generic) LANGUAGE="generic" ;;
+        *)         warn "Invalid choice, defaulting to generic."; LANGUAGE="generic" ;;
+    esac
+fi
 
 # --- Tier ---------------------------------------------------------------------
-echo ""
-info "Select tier:"
-echo "  1) lite       — Minimal: .gitignore, README, lint config"
-echo "  2) standard   — CI/CD, tests, agent skills, .enterprise.yml"
-echo "  3) production — Full: Docker, deploy scripts, all gates"
-read -rp "Tier [1/2/3]: " TIER_CHOICE
-case "$TIER_CHOICE" in
-    1|lite)       TIER="lite" ;;
-    2|standard)   TIER="standard" ;;
-    3|production) TIER="production" ;;
-    *)            warn "Invalid choice, defaulting to lite."; TIER="lite" ;;
-esac
+if [[ -z "$TIER" ]]; then
+    echo ""
+    info "Select tier:"
+    echo "  1) lite       — Minimal: .gitignore, README, lint config"
+    echo "  2) standard   — CI/CD, tests, agent skills, .enterprise.yml"
+    echo "  3) production — Full: Docker, deploy scripts, all gates"
+    read -rp "Tier [1/2/3]: " TIER_CHOICE
+    case "$TIER_CHOICE" in
+        1|lite)       TIER="lite" ;;
+        2|standard)   TIER="standard" ;;
+        3|production) TIER="production" ;;
+        *)            warn "Invalid choice, defaulting to lite."; TIER="lite" ;;
+    esac
+fi
 
 # --- Output Directory ---------------------------------------------------------
-echo ""
-read -rp "Output directory [~/dev/]: " OUTPUT_DIR
+OUTPUT_DIR="$OUTPUT_DIR_FLAG"
+if [[ -z "$OUTPUT_DIR" && "$ASSUME_YES" != "yes" ]]; then
+    echo ""
+    read -rp "Output directory [~/dev/]: " OUTPUT_DIR
+fi
 OUTPUT_DIR="${OUTPUT_DIR:-~/dev/}"
 # Handle tilde expansion
 OUTPUT_DIR="${OUTPUT_DIR/#\~/$HOME}"
@@ -156,13 +232,16 @@ MODEL=""
 API_KEY_ENV="LLM_API_KEY"
 
 if [[ "$TIER" == "standard" || "$TIER" == "production" ]]; then
-    echo ""
-    info "AI Agent Configuration"
-    read -rp "AI provider [anthropic]: " PROVIDER
+    PROVIDER="$PROVIDER_FLAG"; MODEL="$MODEL_FLAG"; API_KEY_ENV="$API_KEY_ENV_FLAG"
+    if [[ "$ASSUME_YES" != "yes" ]]; then
+        echo ""
+        info "AI Agent Configuration"
+        [[ -n "$PROVIDER" ]]    || read -rp "AI provider [anthropic]: " PROVIDER
+        [[ -n "$MODEL" ]]       || read -rp "AI model [claude-sonnet-4-20250514]: " MODEL
+        [[ -n "$API_KEY_ENV" ]] || read -rp "API key env variable [LLM_API_KEY]: " API_KEY_ENV
+    fi
     PROVIDER="${PROVIDER:-anthropic}"
-    read -rp "AI model [claude-sonnet-4-20250514]: " MODEL
     MODEL="${MODEL:-claude-sonnet-4-20250514}"
-    read -rp "API key env variable [LLM_API_KEY]: " API_KEY_ENV
     API_KEY_ENV="${API_KEY_ENV:-LLM_API_KEY}"
 fi
 
@@ -170,7 +249,9 @@ fi
 CREATE_REPO="no"
 GH_ORG=""
 
-if [[ "$TIER" == "standard" || "$TIER" == "production" ]]; then
+if [[ -n "$GITHUB_FLAG" ]]; then
+    CREATE_REPO="$GITHUB_FLAG"; GH_ORG="$GH_ORG_FLAG"
+elif [[ "$ASSUME_YES" != "yes" && ( "$TIER" == "standard" || "$TIER" == "production" ) ]]; then
     echo ""
     read -rp "Create GitHub repository? [y/N]: " CREATE_REPO_INPUT
     if [[ "$(lowercase "$CREATE_REPO_INPUT")" == "y" || "$(lowercase "$CREATE_REPO_INPUT")" == "yes" ]]; then
@@ -193,11 +274,12 @@ if [[ "$TIER" != "lite" ]]; then
     info "Provider:   $PROVIDER"
     info "Model:      $MODEL"
     info "API Key:    \$$API_KEY_ENV"
-    info "GitHub:     $CREATE_REPO"
 fi
+info "GitHub:     $CREATE_REPO${GH_ORG:+ ($GH_ORG)}"
 echo "=========================================="
 echo ""
-read -rp "Proceed? [Y/n]: " CONFIRM
+CONFIRM="y"
+[[ "$ASSUME_YES" == "yes" ]] || read -rp "Proceed? [Y/n]: " CONFIRM
 if [[ "$(lowercase "$CONFIRM")" == "n" || "$(lowercase "$CONFIRM")" == "no" ]]; then
     warn "Aborted."
     exit 0
@@ -210,6 +292,7 @@ PROJECT_DIR="$OUTPUT_DIR/$PROJECT_NAME"
 
 if [[ -d "$PROJECT_DIR" ]]; then
     warn "Directory $PROJECT_DIR already exists."
+    [[ "$ASSUME_YES" == "yes" ]] && die "Refusing to overwrite $PROJECT_DIR in --yes mode. Remove it or pick another --output."
     read -rp "Overwrite? [y/N]: " OVERWRITE
     if [[ "$(lowercase "$OVERWRITE")" != "y" && "$(lowercase "$OVERWRITE")" != "yes" ]]; then
         warn "Aborted."

@@ -2,7 +2,7 @@
 
 # Scaffold Output Validation Script
 # Validates that all required template files exist and are valid
-# without running scaffold.sh (which requires interactive input)
+# and runs scaffold.sh end-to-end in non-interactive (--yes) mode
 
 set -e
 
@@ -169,6 +169,36 @@ run_test "Production tier files exist (Dockerfiles, deploy script)" \
      test -f '$ROOT_DIR/core/docker/Dockerfile.node' && \
      test -f '$ROOT_DIR/core/docker/Dockerfile.generic' && \
      test -f '$ROOT_DIR/automation/deploy-template.sh'"
+
+# =========================================================================
+# End-to-end: run scaffold.sh non-interactively into a temp dir.
+# Uses a throwaway registry so the real one is never touched, and no GitHub.
+# =========================================================================
+E2E_DIR="$(mktemp -d)"
+trap 'rm -rf "$E2E_DIR"' EXIT
+printf '| Code |\n|---|\n<!-- scaffold-append-repo — test marker -->\n' > "$E2E_DIR/registry.md"
+E2E_RUN="REPO_ID_REGISTRY='$E2E_DIR/registry.md' bash '$ROOT_DIR/scaffold.sh' --output '$E2E_DIR' --no-github --yes </dev/null >/dev/null 2>&1"
+
+run_test "E2E lite/generic: scaffold.sh --yes produces the multi-agent files" \
+    "eval \"$E2E_RUN --name e2e-lite --code ZZL --language generic --tier lite\" && \
+     (for f in AGENTS.md CLAUDE.md GEMINI.md README.md CHANGELOG.md docs/SESSION_LOG.md docs/plans/BACKLOG.md; do test -f '$E2E_DIR/e2e-lite/'\$f || exit 1; done) && \
+     grep -q '^@AGENTS.md' '$E2E_DIR/e2e-lite/CLAUDE.md' && \
+     grep -q '^@./AGENTS.md' '$E2E_DIR/e2e-lite/GEMINI.md' && \
+     grep -q '## Project Context' '$E2E_DIR/e2e-lite/AGENTS.md'"
+
+run_test "E2E standard/python: scaffold.sh --yes adds CI, skills and .enterprise.yml" \
+    "eval \"$E2E_RUN --name e2e-std --code ZZS --language python --tier standard\" && \
+     test -f '$E2E_DIR/e2e-std/.enterprise.yml' && \
+     test -f '$E2E_DIR/e2e-std/.github/workflows/ci-cd.yml' && \
+     test -d '$E2E_DIR/e2e-std/.claude/skills'"
+
+run_test "E2E: no unfilled {{PLACEHOLDERS}} in generated projects" \
+    "! grep -rnE '(^|[^\$])\{\{[A-Z_]+\}\}' '$E2E_DIR/e2e-lite' '$E2E_DIR/e2e-std' --exclude-dir=.git"
+
+run_test "E2E: --yes refuses to reuse a registered code and to overwrite a project" \
+    "! eval \"$E2E_RUN --name e2e-other --code ZZL --language generic --tier lite\" && \
+     ! eval \"$E2E_RUN --name e2e-lite --code ZZQ --language generic --tier lite\" && \
+     test -f '$E2E_DIR/e2e-lite/AGENTS.md'"
 
 # =========================================================================
 # Summary
