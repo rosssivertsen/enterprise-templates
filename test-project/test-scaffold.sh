@@ -194,6 +194,11 @@ run_test "E2E standard/python: scaffold.sh --yes adds CI, skills and .enterprise
      test -f '$E2E_DIR/e2e-std/.github/workflows/ci-cd.yml' && \
      test -d '$E2E_DIR/e2e-std/.claude/skills'"
 
+run_test "E2E generic: every make target the docs mention exists in the Makefile" \
+    "(for tgt in \$(grep -rhoE 'make [a-z]+' '$E2E_DIR/e2e-lite/README.md' '$E2E_DIR/e2e-lite/AGENTS.md' | awk '{print \$2}' | sort -u); do \
+       grep -qE \"^\$tgt:\" '$E2E_DIR/e2e-lite/Makefile' || { echo \"missing make target: \$tgt\"; exit 1; }; \
+     done)"
+
 run_test "E2E: no unfilled {{PLACEHOLDERS}} in generated projects" \
     "! grep -rnE '(^|[^\$])\{\{[A-Z_]+\}\}' '$E2E_DIR/e2e-lite' '$E2E_DIR/e2e-std' --exclude-dir=.git"
 
