@@ -11,6 +11,33 @@
 - **Language:** {{LANGUAGE}}
 - **Tier:** {{TIER}}
 
+## Project Context
+
+> Project facts live here, not in CLAUDE.md / GEMINI.md, so every agent sees them.
+
+### Overview
+
+_What this project does, who it is for, and who owns it. Replace this line._
+
+### Commands
+
+#### Development
+{{COMMANDS_DEV}}
+
+#### Testing
+{{COMMANDS_TEST}}
+
+#### Deployment
+{{COMMANDS_DEPLOY}}
+
+### Architecture
+
+{{ARCHITECTURE}}
+
+### Hard Rules
+
+_Project-specific constraints every agent must follow: data that must never be committed, systems that are read-only, actions that need the owner's approval. Replace this line, or write "None"._
+
 ---
 
 ## 0. Delivery Principles

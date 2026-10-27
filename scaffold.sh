@@ -374,6 +374,31 @@ if [[ "$TIER" == "production" ]]; then
 fi
 
 # =============================================================================
+# 5a. Language-specific commands and architecture (used by AGENTS.md + CLAUDE.md)
+# =============================================================================
+# Determine language-appropriate commands
+case "$LANGUAGE" in
+    python)
+        COMMANDS_DEV="- \`make dev\` — Start the development server\n- \`pip install -r requirements.txt\` — Install dependencies\n- \`pip install -r requirements-dev.txt\` — Install dev dependencies"
+        COMMANDS_TEST="- \`make test\` — Run all tests\n- \`pytest tests/unit\` — Run unit tests only\n- \`pytest tests/e2e\` — Run end-to-end tests\n- \`make lint\` — Run linter (ruff/flake8)"
+        COMMANDS_DEPLOY="- \`make deploy\` — Deploy the application\n- \`bash scripts/deploy.sh staging\` — Deploy to staging\n- \`bash scripts/deploy.sh production\` — Deploy to production"
+        ARCHITECTURE="Python project using standard src/ layout with pytest for testing."
+        ;;
+    node)
+        COMMANDS_DEV="- \`npm install\` — Install dependencies\n- \`npm run dev\` — Start the development server\n- \`npm run build\` — Build for production"
+        COMMANDS_TEST="- \`npm test\` — Run all tests\n- \`npm run test:unit\` — Run unit tests only\n- \`npm run test:e2e\` — Run end-to-end tests\n- \`npm run lint\` — Run ESLint"
+        COMMANDS_DEPLOY="- \`npm run deploy\` — Deploy the application\n- \`bash scripts/deploy.sh staging\` — Deploy to staging\n- \`bash scripts/deploy.sh production\` — Deploy to production"
+        ARCHITECTURE="Node.js/TypeScript project using src/ layout with Vitest for testing."
+        ;;
+    generic)
+        COMMANDS_DEV="- \`make dev\` — Start the development environment\n- Refer to the project Makefile for available targets"
+        COMMANDS_TEST="- \`make test\` — Run tests\n- Configure test commands in the Makefile"
+        COMMANDS_DEPLOY="- \`make deploy\` — Deploy the application\n- Configure deployment commands in the Makefile"
+        ARCHITECTURE="Generic project. Update this section with your project's architecture details."
+        ;;
+esac
+
+# =============================================================================
 # 5b. Generate AGENTS.md (all tiers — agent-agnostic standards)
 # =============================================================================
 AGENTS_TEMPLATE="$SCRIPT_DIR/core/docs/AGENTS-template.md"
@@ -382,6 +407,10 @@ if [[ -f "$AGENTS_TEMPLATE" ]]; then
         -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
         -e "s|{{LANGUAGE}}|$LANGUAGE|g" \
         -e "s|{{TIER}}|$TIER|g" \
+        -e "s|{{COMMANDS_DEV}}|$COMMANDS_DEV|g" \
+        -e "s|{{COMMANDS_TEST}}|$COMMANDS_TEST|g" \
+        -e "s|{{COMMANDS_DEPLOY}}|$COMMANDS_DEPLOY|g" \
+        -e "s|{{ARCHITECTURE}}|$ARCHITECTURE|g" \
         "$AGENTS_TEMPLATE" > "$PROJECT_DIR/AGENTS.md"
     success "Generated AGENTS.md (agent-agnostic standards)"
 fi
@@ -425,27 +454,6 @@ fi
 # =============================================================================
 CLAUDE_TEMPLATE="$SCRIPT_DIR/core/docs/CLAUDE-template.md"
 if [[ -f "$CLAUDE_TEMPLATE" ]]; then
-    # Determine language-appropriate commands
-    case "$LANGUAGE" in
-        python)
-            COMMANDS_DEV="- \`make dev\` — Start the development server\n- \`pip install -r requirements.txt\` — Install dependencies\n- \`pip install -r requirements-dev.txt\` — Install dev dependencies"
-            COMMANDS_TEST="- \`make test\` — Run all tests\n- \`pytest tests/unit\` — Run unit tests only\n- \`pytest tests/e2e\` — Run end-to-end tests\n- \`make lint\` — Run linter (ruff/flake8)"
-            COMMANDS_DEPLOY="- \`make deploy\` — Deploy the application\n- \`bash scripts/deploy.sh staging\` — Deploy to staging\n- \`bash scripts/deploy.sh production\` — Deploy to production"
-            ARCHITECTURE="Python project using standard src/ layout with pytest for testing."
-            ;;
-        node)
-            COMMANDS_DEV="- \`npm install\` — Install dependencies\n- \`npm run dev\` — Start the development server\n- \`npm run build\` — Build for production"
-            COMMANDS_TEST="- \`npm test\` — Run all tests\n- \`npm run test:unit\` — Run unit tests only\n- \`npm run test:e2e\` — Run end-to-end tests\n- \`npm run lint\` — Run ESLint"
-            COMMANDS_DEPLOY="- \`npm run deploy\` — Deploy the application\n- \`bash scripts/deploy.sh staging\` — Deploy to staging\n- \`bash scripts/deploy.sh production\` — Deploy to production"
-            ARCHITECTURE="Node.js/TypeScript project using src/ layout with Vitest for testing."
-            ;;
-        generic)
-            COMMANDS_DEV="- \`make dev\` — Start the development environment\n- Refer to the project Makefile for available targets"
-            COMMANDS_TEST="- \`make test\` — Run tests\n- Configure test commands in the Makefile"
-            COMMANDS_DEPLOY="- \`make deploy\` — Deploy the application\n- Configure deployment commands in the Makefile"
-            ARCHITECTURE="Generic project. Update this section with your project's architecture details."
-            ;;
-    esac
 
     sed \
         -e "s|{{PROJECT_NAME}}|$PROJECT_NAME|g" \
