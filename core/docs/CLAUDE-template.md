@@ -2,9 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> **Important:** Also read `AGENTS.md` in this repo root. It contains agent-agnostic
-> standards (session logging, ROI tracking, plus/delta, quality standards) that apply
-> to all AI assistants including Claude. This file adds Claude-specific extensions.
+@AGENTS.md
+
+> **Important:** the import above loads `AGENTS.md` (agent-agnostic standards: session
+> logging, ROI tracking, plus/delta, quality standards) into context. Keep it. Claude Code
+> reads `AGENTS.md` on its own only when a repo has NO `CLAUDE.md` (v2.1.277), so a prose
+> "also read AGENTS.md" line is a request the model may or may not act on, not a load.
+> This file adds Claude-specific extensions.
 
 ## Project Overview
 

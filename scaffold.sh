@@ -579,7 +579,7 @@ fi
 # 11. Append REPO-CODE to the canonical ID registry (Lex Immutabilis)
 # =============================================================================
 if [[ -f "$REPO_ID_REGISTRY" ]]; then
-    REGISTRY_ROW="| **${REPO_CODE}** | repo | \`${PROJECT_NAME}\` (${PROJECT_DIR/#$HOME/~}) | \`docs/plans/BACKLOG.md\` | — | $(date +%Y-%m-%d) |"
+    REGISTRY_ROW="| **${REPO_CODE}** | repo | \`${PROJECT_NAME}\` (${PROJECT_DIR/#$HOME/~}) | \`docs/plans/BACKLOG.md\` | — | TBD | TBD | TBD | $(date +%Y-%m-%d) |"
     MARKER="<!-- scaffold-append-repo —"
     if grep -q "$MARKER" "$REPO_ID_REGISTRY"; then
         # macOS sed -i requires empty string backup suffix
@@ -594,7 +594,7 @@ ${REGISTRY_ROW}
 else
     warn "Registry not found; skipping auto-registration."
     warn "Manually add row to the registry when you're back on the main machine:"
-    warn "  | **${REPO_CODE}** | repo | \`${PROJECT_NAME}\` | \`docs/plans/BACKLOG.md\` | — | $(date +%Y-%m-%d) |"
+    warn "  | **${REPO_CODE}** | repo | \`${PROJECT_NAME}\` | \`docs/plans/BACKLOG.md\` | — | TBD | TBD | TBD | $(date +%Y-%m-%d) |"
 fi
 
 # =============================================================================
